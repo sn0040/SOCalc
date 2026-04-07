@@ -449,6 +449,7 @@ function updateAllDOT() {
     }
     document.getElementById('dotTotal').innerText = Math.round(totalDamage);
     document.getElementById('dotFinalDisplay').innerHTML = `<small>🔥</small> ${Math.round(totalDamage)}`;
+    updatePhysMagicDisplay(); 
 }
 function toggleEntryModeControls(entryDiv) {
     let mode = entryDiv.querySelector('.entry-mode').value;
