@@ -1,0 +1,104 @@
+/* DOT计算器特有样式 */
+.add-entry-btn {
+    background: #f6ae2d;
+    border: none;
+    border-radius: 40px;
+    padding: 8px 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 8px;
+    width: 100%;
+    font-size: 1rem;
+}
+.add-entry-btn:hover {
+    background: #e09d1c;
+}
+.dot-entry {
+    background: #f9fbfe;
+    border-radius: 24px;
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid #cbdae8;
+    position: relative;
+}
+.dot-entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #1f4a6e;
+}
+.dot-entry-header button {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #b3403a;
+    font-weight: bold;
+}
+.dot-entry .stat-badge {
+    margin-top: 8px;
+    background: #eef2f7;
+    border: 1px solid #9bb1cb;
+}
+.rate-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    flex: 1;
+}
+.rate-controls .standard-controls,
+.rate-controls .percent-controls {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+.rate-controls .standard-controls select,
+.rate-controls .standard-controls input,
+.rate-controls .percent-controls input {
+    flex: 1;
+}
+@media (max-width: 700px) {
+    .rate-controls .standard-controls,
+    .rate-controls .percent-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* 自定义条目输入框样式，与其他输入框一致 */
+.custom-name,
+.custom-percent {
+    border: 2px solid #bac8dc;
+    border-radius: 30px;
+    padding: 10px 12px;
+    background: white;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    height: auto;
+    line-height: normal;
+}
+.custom-name:focus,
+.custom-percent:focus {
+    border-color: #f6ae2d;
+}
+
+/* 删除按钮样式 */
+.delete-custom {
+    background: #b3403a;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+.delete-custom:hover {
+    background: #8c2e28;
+}

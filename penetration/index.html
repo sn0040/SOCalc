@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>铃兰之剑 · 穿透伤害计算器</title>
+    <link rel="stylesheet" href="../common/common.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="calculator-card">
+    <h1>
+        ✨ 铃兰之剑 · 穿透伤害计算
+        <span>V1.2.0</span>
+        <span class="author-badge">by 阿呆 (内部版禁止外传)</span>
+        <a href="../index.html" style="background: #2d4059; color: #ffd966; text-decoration: none; padding: 5px 14px; border-radius: 40px; font-size: 0.9rem; font-weight: 500; margin-left: auto;">← 返回</a>
+    </h1>
+    <div class="badge-reference">
+        📘 参考《铃兰之剑PVE基础攻略》 · 第3部分 穿透伤害原理<br>
+        <code>穿透伤害 = (实际攻击力 × 克制倍率 × 技能倍率/100 + 生命值结算部分) × (1+穿透增伤%) × 易伤乘数</code><br>
+        ⚡ 易伤乘数 = (1+伤口%) × min( (1+傀儡%) × (1+梦魇%) × (1+穿透易伤%) × (1-免疫减免%) , 3.0 )<br>
+        ※ 狼姐伤口独立于300%上限之外
+    </div>
+
+    <div class="top-selectors">
+        <div class="selector-item">
+    <label>⚙️ 职业天赋 <a href="../talent.html" style="margin-left: 12px; color: #f6ae2d; text-decoration: none; font-size: 0.85rem; border-bottom: 1px dashed #f6ae2d;">[职业天赋明细]</a></label>
+    <select id="penProfession">
+        <option value="none">无</option>
+        <option value="watcher">守望者 · 增伤20% + 攻击力+12%</option>
+    </select>
+</div>
+        <div class="selector-item"><label>⚖️ 克制关系</label><select id="penWeakness"><option value="1.0">无克制 (1.0)</option><option value="1.3">三色克制 (1.3)</option><option value="0.7">三色被克 (0.7)</option><option value="1.4">光暗克制 (1.4)</option><option value="0.6">光暗被克 (0.6)</option></select></div>
+        <div class="selector-item"><label>🃏 塔罗选择</label><select id="penTarot"><option value="none">无 (0%)</option><option value="death">死神 (穿透增伤13%)</option><option value="fool">愚者 (生命百分比20%)</option></select></div>
+        <div class="selector-item"><label>📐 技能倍率 (%)</label><input type="number" id="penSkillMult" value="100" min="0" step="5"></div>
+    </div>
+
+    <div class="section-grid">
+        <!-- 攻击区间卡片 -->
+        <div class="section-card">
+            <div class="section-title">⚔️ 攻击区间 <span>显示攻击 / 实际攻击</span></div>
+            <div class="row"><div style="flex:2;"><label>基础攻击力</label><input type="number" id="penAtkBase" value="3000" min="0"></div></div>
+            <div class="row"><div><label>攻击BUFF</label><select id="penAtkBuff"><option value="0">无 (0%)</option><option value="10">攻击1 (10%)</option><option value="20">攻击2 (20%)</option><option value="30">攻击3 (30%)</option><option value="40">攻击4 (40%)</option></select></div></div>
+            <div class="row"><div><label>战旗</label><select id="penFlag"><option value="0">无 (0%)</option><option value="20">有战旗 (20%)</option></select></div><div><label>剑杖刻印</label><select id="penSwordScepter"><option value="0">不触发 (0%)</option><option value="4">一步 (4%)</option><option value="8">两步 (8%)</option><option value="12">三步以上 (12%)</option></select></div></div>
+            <div class="row"><div><label>基础光环</label><select id="penBasicAura"><option value="0">无 (0%)</option><option value="10">有 (10%)</option></select></div><div><label>协攻</label><select id="penCoordAttack"><option value="0">无 (0%)</option><option value="5">协攻1 (5%)</option><option value="10">协攻2 (10%)</option><option value="15">协攻3 (15%)</option></select></div></div>
+            <!-- 删除：个性、技能、武器、防具、其他加成 -->
+            <div id="customDisplayAtkContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomDisplayAtkBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加显示攻击自定义条目</button>
+            <div class="stat-badge">常规攻击加成合计 = <span id="penNormalPercent">0</span>%</div>
+            <div class="stat-badge"><span class="conversion-label">攻击转化 =</span><span id="statDisplayConversion">0</span><button id="openConversionBtnDisplay">⚡ 攻击转化</button></div>
+            <div class="stat-badge">显示攻击 = <span id="penDisplayAtk">3000</span></div>
+            <div class="divider"></div>
+            <!-- 实际攻击部分 -->
+            <div class="row">
+                <div><label>高地</label><select id="penHighland"><option value="0">无 (0%)</option><option value="15">有 (15%)</option></select></div>
+                <div><label>低地</label><select id="penLowland"><option value="0">无 (0%)</option><option value="-10">有 (-10%)</option></select></div>
+            </div>
+            <div class="row"><div><label>倒吊人指挥官</label><select id="penHangmanMark"><option value="0">无 (0%)</option><option value="15">有 (+15%)</option></select></div>
+            <div><label>窥破弱点</label><select id="penWeaknessInsight"><option value="0">无 (0%)</option><option value="20">有 (20%)</option></select></div></div>
+            <div id="customActualAtkContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomActualAtkBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加实际攻击自定义条目</button>
+            <div class="stat-badge">实际额外加成合计 = <span id="penExtraPercent">0</span>%</div>
+            <div class="stat-badge"><span class="conversion-label">攻击转化 =</span><span id="statActualConversion">0</span><button id="openConversionBtnActual">⚡ 攻击转化</button></div>
+            <div class="stat-badge">实际攻击 = <span id="penActualAtk">3000</span></div>
+        </div>
+
+        <!-- 百分比区间卡片 -->
+        <div class="section-card">
+            <div class="section-title">📊 百分比区间 <span>生命值结算部分</span></div>
+            <div class="row"><div><label>类型</label><select id="penLifeType"><option value="hpPercent" selected>目标生命百分比</option><option value="atkPercent">攻击力百分比</option><option value="fixed">固定值</option></select></div><div><label>结算倍率</label><input type="number" id="penLifeValue" value="0" step="1" placeholder="%"></div></div>
+            <div class="row" id="penLifeHpRow"><div><label>目标生命值</label><input type="number" id="penLifeTargetHp" value="10000" step="100"></div><div></div></div>
+            <div class="row" id="penLifeAtkRow" style="display:none;"><div><label>攻击力</label><input type="number" id="penLifeAtk" value="3000" step="1"></div><div></div></div>
+            <div class="stat-badge">基础值 = <span id="penLifeBase">0</span></div>
+            <div id="penBonusSection" class="divider"></div>
+            <div id="penBonusOptions" style="display:block;">
+                <!-- 删除新生、晶爆铠甲、个性/反应手动输入，替换为自定义条目 -->
+                <div id="customLifeBonusContainer" style="margin-bottom: 10px;"></div>
+                <button id="addCustomLifeBonusBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加生命值结算自定义条目</button>
+                <div class="stat-badge">百分比加成合计 = <span id="penBonusTotal">0</span>%</div>
+            </div>
+            <div class="stat-badge">最终生命值结算 = <span id="penLifeResult">0</span></div>
+        </div>
+
+        <!-- 穿透增伤区间卡片 -->
+        <div class="section-card">
+            <div class="section-title">✨ 穿透增伤区间 <span>部分光环可能叠加无效</span></div>
+            <div class="row"><div><label>笼中说梦</label><select id="penDreamTalk"><option value="0">无 (0%)</option><option value="15">有 (+15%)</option></select></div><div><label>露卡马尔大光环</label><select id="penLukarAura"><option value="0">无 (0%)</option><option value="15">有 (+15%)</option></select></div></div>
+            <div class="row"><div><label>伊瑟琳德大招光环</label><select id="penIsilindAura"><option value="0">无 (0%)</option><option value="15">有 (+15%)</option></select></div><div><label>棱镜</label><select id="penPrism"><option value="0">无 (0%)</option><option value="10">有 (+10%)</option></select></div></div>
+            <div class="row"><div><label>超重装强袭</label><select id="penHeavyAssault"><option value="0">无 (0%)</option><option value="10">有 (+10%)</option></select></div><div><label>麦莎大光环</label><select id="penMaishaAura"><option value="0">无 (0%)</option><option value="10">有 (+10%)</option></select></div></div>
+            <div class="row"><div><label>触发协同</label><select id="penTriggerCoop"><option value="0">否 (0%)</option><option value="10">是 (+10%)</option></select></div><div><label>小索个性</label><select id="penXiaoSuPersonality"><option value="0">未触发 (0%)</option><option value="25">触发 (+25%)</option></select></div></div>
+            <!-- 光辉的指引和安娜光环放在同一行 -->
+            <div class="row"><div><label>光辉的指引</label><select id="penGloryGuide"><option value="0">无 (0%)</option><option value="12">有 (+12%)</option></select></div><div><label>安娜大光环</label><select id="penAnnaAura"><option value="0">无 (0%)</option><option value="10">有 (+10%)</option><option value="20">守护失效 (+20%)</option></select></div></div>
+            <!-- 删除手动输入%行，替换为自定义条目 -->
+            <div id="customPenDmgContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomPenDmgBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加穿透增伤自定义条目</button>
+            <div class="stat-badge">乘数 = <span id="penDmgMult">1.00x</span></div>
+        </div>
+
+        <!-- 穿透易伤区间卡片 -->
+        <div class="section-card">
+            <div class="section-title">🎯 穿透易伤区间 <span>伤口独立于300%上限外<br>免疫只作用于百分比伤害</span></div>
+            <div class="row"><div><label>傀儡</label><select id="penPuppet"><option value="0">无</option><option value="15">有 (+15%)</option></select></div><div><label>梦魇</label><select id="penNightmare"><option value="0">无</option><option value="5">有 (+5%)</option></select></div></div>
+            <div class="row"><div><label>穿透易伤</label><select id="penPenVuln"><option value="0">无</option><option value="10">易伤1 (+10%)</option><option value="20">易伤2 (+20%)</option></select></div><div><label>免疫减免</label><select id="penImmunity"><option value="0">无</option><option value="0.5">免疫初级 (减免50%)</option><option value="0.8">免疫重击 (减免80%)</option><option value="0.95">免疫高级/究极 (减免95%)</option></select></div></div>
+            <!-- 删除手动输入%行，替换为自定义条目 -->
+            <div id="customPenVulnContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomPenVulnBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加穿透易伤自定义条目</button>
+            <div class="divider"></div>
+            <div class="row">
+    <div><label>狼姐伤口层数</label>
+        <select id="penWoundLayers">
+            <option value="0">0层</option>
+            <option value="1">1层 (+12%)</option>
+            <option value="2">2层 (+25.44%)</option>
+            <option value="3">3层 (+40.4928%)</option>
+            <option value="4">4层 (+57.351936%)</option>
+        </select>
+    </div>
+    <div></div>
+</div>
+            <div class="stat-badge">易伤乘数 = <span id="penVulnMult">1.00x</span></div>
+        </div>
+
+        <!-- 最终增伤区间卡片 -->
+        <div class="section-card">
+            <div class="section-title">✨ 最终增伤区间 <span>独立乘区</span></div>
+            <div class="row"><div><label>大帝个性寒境</label><select id="penEmperorCold"><option value="0">无 (0%)</option><option value="10">有 (+10%)</option></select></div><div></div></div>
+            <div id="customFinalDmgContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomFinalDmgBtn" class="btn action-btn" style="width:100%; margin-top: 8px;">➕ 添加自定义条目</button>
+            <!-- 乘数显示下移，避免与按钮重叠 -->
+            <div class="stat-badge" style="margin-top: 20px;">最终增伤乘数 = <span id="finalDmgMult">1.00x</span></div>
+        </div>
+    </div> <!-- 结束 section-grid -->
+
+    <div class="result-panel">
+        <div class="result-row"><div class="result-item"><div class="result-label">✨ 穿透伤害</div><div class="result-number" id="penDamageDisplay"><small>✨</small> 0</div></div></div>
+        <div class="action-buttons">
+            <button class="btn action-btn" id="penRecordBtn">📝 记录结果</button>
+            <button class="btn action-btn" id="penQueryBtn">📋 查询记录</button>
+            <button class="btn action-btn" id="penClearBtn">🗑️ 清空记录</button>
+            <button class="btn" id="resetToDefault">⚙️ 重置默认</button>
+        </div>
+    </div>
+    <div class="footnote">⚙️ 穿透伤害无视目标防御、护盾、伤害反射、正面减伤，无法被格挡，不会暴击，不受普通增伤区间加成。高地生效，背击无效。只有单体伤害吃高地加成。</div>
+</div>
+
+<!-- 公共攻击转化模态框 -->
+<div id="conversionModal" class="conversion-modal">
+    <div class="conversion-container">
+        <div class="conversion-header"><span id="conversionTitle">⚡ 显示攻击转化</span><button id="closeConversionModal">✖</button></div>
+        <div class="conversion-field"><label>转化数值（黑字面板）</label><input type="number" id="convBaseValue" value="0" step="1" placeholder="请输入面板转化值" onfocus="this.select()"></div>
+        <div class="conversion-field"><label>转换倍率 (%)</label><input type="number" id="convMultiplier" value="0" step="1" placeholder="例如: 50" onfocus="this.select()"></div>
+        <div class="conversion-field"><label>加成 (%)</label><input type="number" id="convBonus" value="0" step="1" onfocus="this.select()"></div>
+        <div class="conversion-field"><label>加成 (不显示) (%)</label><input type="number" id="convHiddenBonus" value="0" step="1" onfocus="this.select()"></div>
+        <div class="conversion-result">攻击转化值: <span id="convResultValue">0</span></div>
+        <div class="conversion-buttons"><button id="resetConversionBtn" class="reset-conversion">重置</button><button id="applyConversionBtn">应用并关闭</button></div>
+        <div style="font-size:0.8rem; color:#54789e; margin-top:10px;">计算公式: 转化数值 × (1 + 加成% + 加成(不显示)%) × 转换倍率%</div>
+    </div>
+</div>
+
+<!-- 记录模态框 -->
+<div id="recordModal" class="modal-mask">
+    <div class="modal-container">
+        <div class="modal-header"><span>📚 穿透伤害记录库</span><button class="close-modal" id="closeModalBtn">✖ 关闭</button></div>
+        <div id="recordsListArea">加载中...</div>
+        <div id="compareArea" style="margin-top: 20px;"></div>
+    </div>
+</div>
+
+<script type="module" src="calculator.js"></script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>铃兰之剑 · DOT伤害计算器</title>
+    <link rel="stylesheet" href="../common/common.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="calculator-card">
+    <h1>
+        🔥 铃兰之剑 · DOT伤害计算器
+        <span>V1.3.1</span>
+        <span style="background:#b3403a;">by 阿呆 (内部版禁止外传)</span>
+        <a href="../index.html" style="background: #2d4059; color: #ffd966; text-decoration: none; padding: 5px 14px; border-radius: 40px; font-size: 0.9rem; font-weight: 500; margin-left: auto;">← 返回</a>
+    </h1>
+    <div class="badge-reference">
+        📘 依据《铃兰之剑PVE基础攻略》第3部分穿透伤害原理<br>
+        🔥 公式说明：<br>
+        &nbsp;&nbsp;· 生命百分比类：<code>目标生命值 × 基础百分比 × (1+持续伤害增伤%) × min(1+穿透易伤%,3.0) × min(1+持续伤害易伤%,3.0)</code><br>
+        &nbsp;&nbsp;· 攻击力类（标准DOT）：<code>双攻之和 × 倍率 × (1+持续伤害增伤%) × min(1+穿透易伤%,3.0) × min(1+持续伤害易伤%,3.0) × (1+伤口%)</code><br>
+        &nbsp;&nbsp;· 攻击力类（生命流失/伤痕撕裂）：<code>指定物攻或魔攻 × 倍率 × (1+持续伤害增伤%) × min(1+穿透易伤%,3.0) × min(1+持续伤害易伤%,3.0) × (1+伤口%)</code><br>
+        ✔️ 支持多DOT叠加，每个条目独立配置倍率与结算次数。
+    </div>
+
+    <div class="top-selectors">
+        <div class="selector-item">
+    <label>⚙️ 职业天赋 <a href="../talent.html" style="margin-left: 12px; color: #f6ae2d; text-decoration: none; font-size: 0.85rem; border-bottom: 1px dashed #f6ae2d;">[职业天赋明细]</a></label>
+    <select id="profession">
+        <option value="none">无</option>
+        <option value="watcher">守望者 · 攻击力+12%（无增伤）</option>
+    </select>
+</div>
+        <div class="selector-item">
+            <label>🃏 塔罗选择</label>
+            <select id="tarot">
+                <option value="none">无</option>
+                <option value="hangman">倒吊人 (持续伤害增伤+20%)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="section-grid" id="topGrid">
+        <!-- DOT 结算项目卡片（多条目动态区域） -->
+        <div class="section-card" id="dotSectionCard">
+            <div class="section-title">📊 DOT 结算项目 <span>多条目支持</span></div>
+            <div id="dotEntriesContainer"></div>
+            <button class="btn action-btn" id="addEntryBtn" style="width:100%; margin-top: 8px;">➕ 添加DOT条目</button>
+            <div class="stat-badge" style="margin-top:12px;">施法者双攻之和 = <span id="totalAtk">6000</span></div>
+            <div class="stat-badge">🔥 DOT总伤害 = <span id="dotTotal">0</span></div>
+        </div>
+
+        <!-- 攻击区间卡片（修改后） -->
+        <div class="section-card" id="attackSectionCard">
+            <div class="section-title">⚔️ 攻击区间 <span>显示攻击 / 实际攻击</span></div>
+            <div class="row"><div style="flex:2;"><label>基础物攻</label><input type="number" id="physBase" value="3000"></div><div style="flex:2;"><label>基础魔攻</label><input type="number" id="magicBase" value="3000"></div></div>
+            <div class="row"><div><label>攻击BUFF</label><select id="atkBuff"><option value="0">无 (0%)</option><option value="10">攻击1 (10%)</option><option value="20">攻击2 (20%)</option><option value="30">攻击3 (30%)</option><option value="40">攻击4 (40%)</option></select></div></div>
+            <div class="row"><div><label>战旗</label><select id="flag"><option value="0">无 (0%)</option><option value="20">有战旗 (20%)</option></select></div><div><label>剑杖刻印</label><select id="swordScepter"><option value="0">不触发 (0%)</option><option value="4">一步 (4%)</option><option value="8">两步 (8%)</option><option value="12">三步以上 (12%)</option></select></div></div>
+            <div class="row"><div><label>基础光环</label><select id="basicAura"><option value="0">无 (0%)</option><option value="10">有 (10%)</option></select></div><div><label>协攻</label><select id="coordAttack"><option value="0">无 (0%)</option><option value="5">协攻1 (5%)</option><option value="10">协攻2 (10%)</option><option value="15">协攻3 (15%)</option></select></div></div>
+            <!-- 删除：个性、技能、武器、防具、其他加成 -->
+            <!-- 显示攻击自定义条目 -->
+            <div id="customDisplayAtkContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomDisplayAtkBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加显示攻击自定义条目</button>
+            <div class="stat-badge">常规攻击加成合计 = <span id="normalPercent">0</span>%</div>
+            <div class="stat-badge"><span class="conversion-label">物攻转化 =</span><span id="physConversion">0</span><button id="openPhysConv">⚡ 物攻转化</button></div>
+            <div class="stat-badge">物攻·显示攻击 = <span id="physDisplay">3000</span></div>
+            <div class="stat-badge"><span class="conversion-label">魔攻转化 =</span><span id="magicConversion">0</span><button id="openMagicConv">⚡ 魔攻转化</button></div>
+            <div class="stat-badge">魔攻·显示攻击 = <span id="magicDisplay">3000</span></div>
+            <div class="divider"></div>
+            <!-- 实际攻击部分：删除高地、倒吊人指挥官、窥破弱点、手动加成，替换为自定义条目 -->
+            <div id="customActualAtkContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomActualAtkBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加实际攻击自定义条目</button>
+            <div class="stat-badge">实际额外加成合计 = <span id="extraPercent">0</span>%</div>
+            <div class="stat-badge">物攻·实际攻击 = <span id="physActual">3000</span></div>
+            <div class="stat-badge">魔攻·实际攻击 = <span id="magicActual">3000</span></div>
+        </div>
+    </div>
+
+    <div class="section-grid">
+        <!-- 持续伤害增伤区间（修改后） -->
+        <div class="section-card">
+            <div class="section-title">📈 持续伤害增伤 <span>加算，无上限</span></div>
+            <!-- 删除手动输入 -->
+            <div class="row"><div><label>持续伤害buff</label><select id="incBuff"><option value="0">无 (0%)</option><option value="10">持续伤害1 (10%)</option></select></div></div>
+            <div class="row"><div><label>羽姐大招</label><select id="yujieUlt"><option value="0">无 (0%)</option><option value="15">有 (15%)</option></select></div></div>
+            <div class="row"><div><label>羽姐5星个性</label><select id="yujiePersonality"><option value="0">无 (0%)</option><option value="25">有 (25%)</option></select></div></div>
+            <div class="row"><div><label>大哈沙光环</label><select id="hashaAura"><option value="0">无 (0%)</option><option value="5">有 (5%)</option><option value="15">有解放 (15%)</option></select></div></div>
+            <!-- 新增自定义条目 -->
+            <div id="customDotIncContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomDotIncBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加持续增伤自定义条目</button>
+            <div class="stat-badge">当前增伤乘数 = <span id="incMult">1.00x</span></div>
+        </div>
+
+        <!-- 穿透易伤 + 持续伤害易伤 + 伤口 合并卡片（修改后） -->
+        <div class="section-card">
+            <div class="section-title">🎯 穿透/持续易伤 & 伤口</div>
+            
+            <!-- 穿透易伤子区（删除手动输入） -->
+            <div class="sub-section">
+                <div class="sub-title">🔻 穿透易伤 <span style="font-weight:normal;">(乘算，上限300%)</span></div>
+                <div class="row"><div><label>傀儡</label><select id="puppet"><option value="0">无 (0%)</option><option value="15">有 (+15%)</option></select></div><div><label>梦魇</label><select id="nightmare"><option value="0">无 (0%)</option><option value="5">有 (+5%)</option></select></div></div>
+                <div class="row"><div><label>穿透易伤</label><select id="penVuln"><option value="0">无 (0%)</option><option value="10">易伤1 (+10%)</option><option value="20">易伤2 (+20%)</option></select></div><div><label>免疫减免</label><select id="immunity"><option value="0">无</option><option value="0.5">免疫初级 (减免50%)</option><option value="0.8">免疫重击 (减免80%)</option><option value="0.95">免疫高级/究极 (减免95%)</option></select></div></div>
+                <!-- 新增自定义条目 -->
+                <div id="customPenVulnContainer" style="margin-bottom: 10px;"></div>
+                <button id="addCustomPenVulnBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加穿透易伤自定义条目</button>
+                <div class="stat-badge">穿透易伤乘数 = <span id="penMult">1.00x</span></div>
+            </div>
+            
+            <!-- 持续伤害易伤子区（删除手动输入） -->
+            <div class="sub-section">
+                <div class="sub-title">🔥 持续伤害易伤 <span style="font-weight:normal;">(乘算，上限300%)</span></div>
+                <div class="row"><div><label>茉茉个性光环</label><select id="momoAura">
+                    <option value="0">无 (0%)</option><option value="15">一星 (15%)</option><option value="20">二、三星 (20%)</option>
+                    <option value="25">四星 (25%)</option><option value="35">五星 (35%)</option>
+                </select></div></div>
+                <div class="row"><div><label>波奇个性光环</label><select id="boqiAura">
+                    <option value="0">无 (0%)</option><option value="15">一、二星 (15%)</option><option value="25">三、四星 (25%)</option>
+                    <option value="35">五星 (35%)</option>
+                </select></div></div>
+                <div class="row"><div><label>魅惑</label><select id="charm"><option value="0">无 (0%)</option><option value="30">有 (30%)</option></select></div></div>
+                <!-- 新增自定义条目 -->
+                <div id="customPersistentVulnContainer" style="margin-bottom: 10px;"></div>
+                <button id="addCustomPersistentVulnBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加持续易伤自定义条目</button>
+                <div class="stat-badge">持续伤害易伤乘数 = <span id="persistentMult">1.00x</span></div>
+            </div>
+            
+            <!-- 伤口子区（不变） -->
+            <div class="sub-section">
+                <div class="sub-title">🩸 伤口 <span style="font-weight:normal;">(仅对攻击力类DOT生效，独立乘区，无上限)</span></div>
+                <div class="row">
+                    <div><label>伤口层数</label>
+                        <select id="woundLayers">
+                            <option value="0">0层</option>
+                            <option value="1">1层 (+12%)</option>
+                            <option value="2">2层 (+25.44%)</option>
+                            <option value="3">3层 (+40.4928%)</option>
+                            <option value="4">4层 (+57.351936%)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="stat-badge">伤口乘数 = <span id="woundMult">1.00x</span></div>
+            </div>
+        </div>  <!-- 闭合穿透/持续易伤 & 伤口 卡片 -->
+    </div>  <!-- 闭合第二个 .section-grid -->
+
+    <div class="result-panel">
+        <div class="result-row"><div class="result-item"><div class="result-label">🔥 DOT总伤害</div><div class="result-number" id="dotFinalDisplay"><small>🔥</small> 0</div></div></div>
+        <div class="action-buttons">
+            <button class="btn action-btn" id="recordBtn">📝 记录结果</button>
+            <button class="btn action-btn" id="queryBtn">📋 查询记录</button>
+            <button class="btn action-btn" id="clearBtn">🗑️ 清空记录</button>
+            <button class="btn" id="resetBtn">⚙️ 重置默认</button>
+        </div>
+    </div>
+    <div class="footnote">⚠️ 持续伤害增伤（加算无上限）；持续伤害易伤（乘算上限300%）；穿透易伤（乘算上限300%）；伤口仅对攻击力类DOT生效（独立乘区，无上限）。愚者塔罗请手动调整目标生命值。</div>
+</div>  <!-- 闭合 .calculator-card -->
+
+<!-- 公共攻击转化模态框 -->
+<div id="conversionModal" class="conversion-modal">
+    <div class="conversion-container">
+        <div class="conversion-header"><span id="conversionTitle">⚡ 物攻转化</span><button id="closeConversionModal">✖</button></div>
+        <div class="conversion-field"><label>转化数值（黑字面板）</label><input type="number" id="convBaseValue" value="0" step="1" placeholder="请输入面板转化值" onfocus="this.select()"></div>
+        <div class="conversion-field"><label>转换倍率 (%)</label><input type="number" id="convMultiplier" value="0" step="1" placeholder="例如: 50" onfocus="this.select()"></div>
+        <div class="conversion-field"><label>加成 (%)</label><input type="number" id="convBonus" value="0" step="1" onfocus="this.select()"></div>
+        <div class="conversion-field"><label>加成 (不显示) (%)</label><input type="number" id="convHiddenBonus" value="0" step="1" onfocus="this.select()"></div>
+        <div class="conversion-result">攻击转化值: <span id="convResultValue">0</span></div>
+        <div class="conversion-buttons"><button id="resetConversionBtn" class="reset-conversion">重置</button><button id="applyConversionBtn">应用并关闭</button></div>
+        <div style="font-size:0.8rem; color:#54789e; margin-top:10px;">计算公式: 转化数值 × (1 + 加成% + 加成(不显示)%) × 转换倍率%</div>
+    </div>
+</div>
+
+<!-- 记录模态框 -->
+<div id="recordModal" class="modal-mask">
+    <div class="modal-container">
+        <div class="modal-header"><span>📚 记录库 (无上限)</span><button class="close-modal" id="closeModalBtn">✖ 关闭</button></div>
+        <div id="recordsListArea">加载中...</div>
+        <div id="compareArea" style="margin-top: 20px;"></div>
+    </div>
+</div>
+
+<script type="module" src="calculator.js"></script>
+</body>
+</html>

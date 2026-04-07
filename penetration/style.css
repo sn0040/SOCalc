@@ -1,0 +1,35 @@
+/* 穿透计算器特有样式 */
+.penetration-note {
+    font-size: 0.8rem;
+    color: #6c8aa3;
+    margin-top: 5px;
+    text-align: center;
+}
+
+/* 统一自定义条目中名称输入框的样式 */
+.custom-name {
+    border: 2px solid #bac8dc;
+    border-radius: 30px;
+    padding: 10px 12px;
+    background: white;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.custom-name:focus {
+    border-color: #f6ae2d;
+}
+
+.row .custom-name,
+.row .custom-percent {
+    border: 2px solid #bac8dc !important;
+    border-radius: 30px !important;
+    padding: 10px 12px !important;
+    background: white !important;
+    font-size: 1rem !important;
+    outline: none !important;
+}
+.row .custom-name:focus,
+.row .custom-percent:focus {
+    border-color: #f6ae2d !important;
+}

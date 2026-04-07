@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>铃兰之剑 · 职业天赋明细</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1a2639;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            padding: 20px;
+        }
+        .card {
+            background: linear-gradient(145deg, #f8fbff 0%, #e9eef5 100%);
+            width: 100%;
+            max-width: 1300px;
+            border-radius: 36px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 10, 30, 0.3);
+            padding: 24px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f6ae2d;
+        }
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #0b1e33;
+            margin: 0;
+        }
+        .back-btn {
+            background: #2d4059;
+            color: #ffd966;
+            text-decoration: none;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+        .back-btn:hover {
+            background: #1f2f44;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 28px;
+            background: #ffffffcc;
+            padding: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            min-width: 700px;
+        }
+        th, td {
+            border: 1px solid #bac8dc;
+            padding: 12px 14px;
+            vertical-align: middle;  /* 垂直居中 */
+        }
+        th {
+            background: #f0e5d2;
+            font-weight: 700;
+            color: #1f4a6e;
+            font-size: 1rem;
+            text-align: center;      /* 表头文字居中 */
+        }
+        /* 职业列和天赋名称列：水平居中 */
+        .job-col, .name-col {
+            text-align: center;
+        }
+        /* 描述列：左对齐，保持可读性 */
+        .desc-col {
+            text-align: left;
+        }
+        tr:nth-child(even) td {
+            background: #f7fafd;
+        }
+        .job-col {
+            font-weight: 600;
+            color: #0b2b44;
+            background-color: #f0f2f5;
+        }
+        .name-col {
+            font-weight: 600;
+            color: #f09b2c;
+        }
+        .desc-col {
+            line-height: 1.45;
+        }
+        @media (max-width: 700px) {
+            .card { padding: 18px 12px; }
+            h1 { font-size: 1.4rem; }
+            th, td { padding: 8px 10px; font-size: 0.8rem; }
+        }
+        .footnote {
+            margin-top: 20px;
+            color: #54789e;
+            font-size: 0.75rem;
+            text-align: center;
+            border-top: 1px dashed #b3c7df;
+            padding-top: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="header">
+        <h1>📜 职业天赋明细</h1>
+        <button class="back-btn" onclick="goBack()">← 返回</button>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>职业</th>
+                    <th>天赋名称</th>
+                    <th>效果描述</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 粉碎者（2个天赋） -->
+                <tr>
+                    <td class="job-col" rowspan="2">粉碎者</td>
+                    <td class="name-col">粉碎者的勇气</td>
+                    <td class="desc-col">场上所有职能为&lt;粉碎者&gt;的己方，攻击时，若目标生命值百分比高于自己，造成伤害提高20%。</td>
+                </tr>
+                <tr>
+                    <td class="name-col">粉碎者的碾压</td>
+                    <td class="desc-col">场上所有职能为&lt;粉碎者&gt;的己方，获得效果：<br>① [健康]时，伤害提高15%。<br>② 攻击时，若自身生命百分比高于目标则额外提高伤害：每高1%，伤害提高1%，最多15%。</td>
+                </tr>
+                <!-- 突袭者（2个天赋） -->
+                <tr>
+                    <td class="job-col" rowspan="2">突袭者</td>
+                    <td class="name-col">突袭者的致命</td>
+                    <td class="desc-col">场上所有职能为&lt;突袭者&gt;的己方，暴击伤害提高6%，无视目标防御15%。</td>
+                </tr>
+                <tr>
+                    <td class="name-col">突袭者的直觉</td>
+                    <td class="desc-col">场上所有职能为&lt;突袭者&gt;的己方，获得效果：<br>① 暴击率、暴击伤害提高5%；造成[背击]时，暴击率、暴击伤害额外提高3%。<br>② 暴击、造成[背击]后，使自身受到伤害降低8%，持续到下次行动开始。</td>
+                </tr>
+                <!-- 防御者（3个天赋） -->
+                <tr>
+                    <td class="job-col" rowspan="3">防御者</td>
+                    <td class="name-col">防御者的怒火</td>
+                    <td class="desc-col">场上所有职能为&lt;防御者&gt;的己方，处于[受伤]状态时，攻击提高12%。</td>
+                </tr>
+                <tr>
+                    <td class="name-col">防御者的武装</td>
+                    <td class="desc-col">场上所有职能为&lt;防御者&gt;的己方，拥有[物理护盾]时，伤害提高20%。</td>
+                </tr>
+                <tr>
+                    <td class="name-col">防御者的坚定</td>
+                    <td class="desc-col">场上所有职能为&lt;防御者&gt;的己方，获得效果：3格内存在队友时，伤害提高8%、受到伤害降低8%。</td>
+                </tr>
+                <!-- 毁灭者（2个天赋） -->
+                <tr>
+                    <td class="job-col" rowspan="2">毁灭者</td>
+                    <td class="name-col">毁灭者的敏锐</td>
+                    <td class="desc-col">场上所有职能为&lt;毁灭者&gt;的己方，攻击拥有[减益]的敌人时，伤害提高20%。</td>
+                </tr>
+                <tr>
+                    <td class="name-col">毁灭者的阴影</td>
+                    <td class="desc-col">场上所有职能为&lt;毁灭者&gt;的己方，和敌方交战时，根据对方[减益]数量，产生效果：<br>① [减益]数量不少于自己时，自身伤害提高10%。<br>② [减益]数量少于自己时，自身受到伤害降低10%。</td>
+                </tr>
+                <!-- 守望者（3个天赋） -->
+                <tr>
+                    <td class="job-col" rowspan="3">守望者</td>
+                    <td class="name-col">守望者的从容</td>
+                    <td class="desc-col">场上所有职能为&lt;守望者&gt;的己方，攻击时，若自身生命值百分比大于目标，攻击提高12%。</td>
+                </tr>
+                <tr>
+                    <td class="name-col">守望者的决心</td>
+                    <td class="desc-col">场上所有职能为&lt;守望者&gt;的己方，自身拥有2个及以上[增益]时，伤害提高20%。</td>
+                </tr>
+                <tr>
+                    <td class="name-col">守望者的从容</td>
+                    <td class="desc-col">场上所有职能为&lt;守望者&gt;的己方，和敌方交战时，根据对方[增益]数量，产生效果：<br>① [增益]数量不少于自己时，自身伤害提高10%。<br>② [增益]数量少于自己时，自身受到伤害降低10%。</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="footnote">※ 天赋效果基于游戏内描述整理，实际以游戏最新版本为准。</div>
+</div>
+<script>
+    function goBack() {
+        if (document.referrer && document.referrer.includes(window.location.host)) {
+            window.history.back();
+        } else {
+            window.location.href = 'index.html';
+        }
+    }
+</script>
+</body>
+</html>

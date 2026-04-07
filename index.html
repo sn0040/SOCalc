@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes, viewport-fit=cover">
+    <title>访问验证</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background:#1a2639;
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            font-family:system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            padding:20px;
+        }
+        .login-box {
+            background:#fff;
+            padding:50px 36px;
+            border-radius:28px;
+            box-shadow:0 10px 30px rgba(0,0,0,0.3);
+            text-align:center;
+            width:100%;
+            max-width:420px;
+        }
+        .login-box h2 {
+            color:#2d4059;
+            margin-bottom:32px;
+            font-size:24px;
+        }
+        #pwd {
+            width:100%;
+            padding:20px 22px;
+            border:1px solid #ddd;
+            border-radius:16px;
+            font-size:18px;
+            margin-bottom:28px;
+            outline:none;
+        }
+        #pwd:focus {
+            border-color:#f6ae2d;
+            border-width:2px;
+        }
+        button {
+            width:100%;
+            padding:20px;
+            background:#2d4059;
+            color:#ffd966;
+            border:none;
+            border-radius:16px;
+            font-size:18px;
+            font-weight:bold;
+            cursor:pointer;
+        }
+        button:hover {
+            background:#3b4f6b;
+        }
+        .error {
+            color:red;
+            margin-bottom:20px;
+            font-size:15px;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+// ============== 密码配置 ==============
+const CORRECT_PWD = "888";
+// ======================================
+
+// 检查登录状态（SESSION 级别，关浏览器就失效）
+function isLoggedIn() {
+    return sessionStorage.getItem("auth") === "ok";
+}
+
+// 设置登录（关浏览器自动消失）
+function setLoggedIn() {
+    sessionStorage.setItem("auth", "ok");
+}
+
+// 显示主页
+function showMainPage() {
+    document.body.innerHTML = `
+        <style>
+            * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+            body { background:#1a2639; min-height:100vh; display:flex; align-items:center; justify-content:center; font-family:system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; padding:20px; }
+            .nav-container { background:linear-gradient(145deg, #f8fbff 0%, #e9eef5 100%); width:100%; max-width:1200px; border-radius:48px; box-shadow:0 25px 45px rgba(0,0,0,0.5), 0 4px 12px rgba(0,10,30,0.3); padding:32px 28px; border:1px solid rgba(255,255,255,0.6); transition:all 0.2s ease; }
+            .title-section { text-align:center; margin-bottom:40px; }
+            .title-section h1 { font-size:2.2rem; font-weight:800; color:#0b1e33; letter-spacing:-0.01em; display:inline-flex; align-items:center; gap:12px; background:rgba(27,55,86,0.08); padding:8px 28px; border-radius:80px; backdrop-filter:blur(2px); }
+            .title-section h1 span { background:#2d4059; color:#ffd966; font-size:0.9rem; padding:5px 16px; border-radius:40px; font-weight:500; letter-spacing:normal; }
+            .calculators-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:28px; margin-top:16px; }
+            .calc-card { background:#ffffffdd; background:linear-gradient(135deg, #ffffff 0%, #f7fafd 100%); border-radius:36px; box-shadow:0 12px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.02); transition:transform 0.2s cubic-bezier(0.2,0.9,0.4,1.1), box-shadow 0.25s ease; border:1px solid rgba(186,200,220,0.5); backdrop-filter:blur(2px); overflow:hidden; }
+            .calc-card:hover { transform:translateY(-6px); box-shadow:0 24px 36px rgba(0,0,0,0.15), 0 6px 12px rgba(0,0,0,0.1); border-color:#f6ae2d80; }
+            .calc-link { display:flex; flex-direction:column; align-items:center; justify-content:center; text-decoration:none; padding:36px 24px; width:100%; height:100%; background:transparent; text-align:center; }
+            .card-icon { font-size:4.2rem; margin-bottom:20px; background:#eef2f9; width:100px; height:100px; display:flex; align-items:center; justify-content:center; border-radius:60px; box-shadow:inset 0 1px 3px #0001, 0 8px 14px rgba(0,0,0,0.05); transition:all 0.2s; }
+            .calc-name { font-size:1.8rem; font-weight:800; color:#1f3b4c; margin-bottom:12px; letter-spacing:-0.3px; background:linear-gradient(135deg, #1f3b4c, #2c5a6e); background-clip:text; -webkit-background-clip:text; color:transparent; }
+            .arrow-hint { font-size:2rem; font-weight:300; color:#f6ae2d; opacity:0.7; transition:opacity 0.2s, transform 0.2s; margin-top:8px; }
+            .calc-card:hover .arrow-hint { opacity:1; transform:translateX(6px); }
+            @media (max-width:700px) {
+                body { padding:16px; }
+                .nav-container { padding:24px 18px; border-radius:36px; }
+                .title-section h1 { font-size:1.6rem; padding:5px 18px; gap:6px; flex-wrap:wrap; justify-content:center; }
+                .calculators-grid { gap:20px; grid-template-columns:1fr; }
+                .card-icon { width:80px; height:80px; font-size:3.4rem; }
+                .calc-name { font-size:1.6rem; }
+            }
+        </style>
+        <div class="nav-container">
+            <div class="title-section">
+                <h1>⚔️ 铃兰之剑 · 伤害计算<span>by：阿呆&铃兰之剑-爱与和平频道的小伙伴们</span></h1>
+            </div>
+            <div class="calculators-grid">
+                <div class="calc-card">
+                    <a href="damage/index.html" class="calc-link">
+                        <div class="card-icon">💥</div>
+                        <div class="calc-name">直伤计算器</div>
+                        <div class="arrow-hint">→</div>
+                    </a>
+                </div>
+                <div class="calc-card">
+                    <a href="penetration/index.html" class="calc-link">
+                        <div class="card-icon">🔻</div>
+                        <div class="calc-name">穿伤计算器</div>
+                        <div class="arrow-hint">→</div>
+                    </a>
+                </div>
+                <div class="calc-card">
+                    <a href="dot/index.html" class="calc-link">
+                        <div class="card-icon">🔥</div>
+                        <div class="calc-name">DOT计算器</div>
+                        <div class="arrow-hint">→</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 显示密码框
+function showLogin() {
+    document.body.innerHTML = `
+        <div class="login-box">
+            <h2>🔒 请输入访问密码</h2>
+            <div id="error" class="error"></div>
+            <input type="password" id="pwd" placeholder="输入访问密码" autocomplete="off">
+            <button onclick="check()">确认进入</button>
+        </div>
+    `;
+
+    // 回车登录
+    document.getElementById("pwd").addEventListener("keydown", function(e) {
+        if (e.key === "Enter") check();
+    });
+}
+
+// 验证密码
+function check() {
+    let val = document.getElementById("pwd").value.trim();
+    if (val === CORRECT_PWD) {
+        setLoggedIn();
+        showMainPage();
+    } else {
+        document.getElementById("error").innerText = "密码错误，请重试";
+    }
+}
+
+// 初始化
+if (isLoggedIn()) {
+    showMainPage();
+} else {
+    showLogin();
+}
+</script>
+</body>
+</html>
