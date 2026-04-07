@@ -9,12 +9,12 @@
 </head>
 <body>
 <div class="calculator-card">
-<h1>
-    ⚔️ 铃兰之剑 · 伤害计算
-    <span>V1.0.7</span>
-    <span class="author-badge">by 阿呆 (内部版禁止外传)</span>
-    <a href="../index.html" style="background: #2d4059; color: #ffd966; text-decoration: none; padding: 5px 14px; border-radius: 40px; font-size: 0.9rem; font-weight: 500; margin-left: auto;">← 返回</a>
-</h1>
+    <h1>
+        ⚔️ 铃兰之剑 · 伤害计算
+        <span>V1.0.7</span>
+        <span class="author-badge">by 阿呆 (内部版禁止外传)</span>
+        <a href="../index.html" style="background: #2d4059; color: #ffd966; text-decoration: none; padding: 5px 14px; border-radius: 40px; font-size: 0.9rem; font-weight: 500; margin-left: auto;">← 返回</a>
+    </h1>
     <div class="badge-reference">
         📘 参考《铃兰之剑PVE基础攻略》 · 第2部分 基础伤害原理<br>
         <code>伤害 = (实际攻击力 − 最终防御力) × (技能倍率/100) × (1+增伤区%) × (1+易伤区%) × (1+暴伤区%) × 最终增伤乘数</code><br>
@@ -23,124 +23,135 @@
         ⚡剑杖（取回合内单次移动最大值）
     </div>
 
-<div class="top-selectors">
-    <div class="selector-item">
-        <label>⚙️ 职业天赋 <a href="../talent.html"  style="margin-left: 12px; color: #f6ae2d; text-decoration: none; font-size: 0.85rem; border-bottom: 1px dashed #f6ae2d;">[职业天赋明细]</a></label>
-        <select id="profession">
-            <option value="none">无</option>
-            <option value="smasher15">粉碎者 · 增伤15%</option>
-            <option value="smasher20">粉碎者 · 增伤20%</option>
-            <option value="smasher35">粉碎者 · 增伤35%</option>
-            <option value="defender28">防御者 · 增伤28%</option>
-            <option value="assassin">突袭者 · 无视15% + 爆伤11% + 暴击5% (背击时额外+3%)</option>
-            <option value="watcher">守望者 · 增伤20% + 攻击力+12%</option>
-            <option value="destroyer30">毁灭者 · 增伤30%</option>
-        </select>
+    <div class="top-selectors">
+        <div class="selector-item">
+            <label>⚙️ 职业天赋 <a href="../talent.html" style="margin-left: 12px; color: #f6ae2d; text-decoration: none; font-size: 0.85rem; border-bottom: 1px dashed #f6ae2d;">[职业天赋明细]</a></label>
+            <select id="profession">
+                <option value="none">无</option>
+                <option value="smasher15">粉碎者 · 增伤15%</option>
+                <option value="smasher20">粉碎者 · 增伤20%</option>
+                <option value="smasher35">粉碎者 · 增伤35%</option>
+                <option value="defender28">防御者 · 增伤28%</option>
+                <option value="assassin">突袭者 · 无视15% + 爆伤11% + 暴击5% (背击时额外+3%)</option>
+                <option value="watcher">守望者 · 增伤20% + 攻击力+12%</option>
+                <option value="destroyer30">毁灭者 · 增伤30%</option>
+            </select>
+        </div>
+        <div class="selector-item"><label>⚖️ 克制关系</label><select id="weakness"><option value="1.0">无克制 (1.0)</option><option value="1.3">三色克制 (1.3)</option><option value="0.7">三色被克 (0.7)</option><option value="1.4">光暗克制 (1.4)</option><option value="0.6">光暗被克 (0.6)</option></select></div>
+        <div class="selector-item"><label>🃏 塔罗选择</label><select id="tarotSelect"><option value="none">无</option><option value="magician_single">魔术师单体 (+16%增伤)</option><option value="magician">魔术师 (+40%增伤)</option><option value="justice">正义 (暴击+15%爆伤)</option><option value="fool">愚者 (+10%增伤)</option><option value="tower">法皇/高塔 (+20%增伤)</option></select></div>
     </div>
-    <div class="selector-item"><label>⚖️ 克制关系</label><select id="weakness"><option value="1.0">无克制 (1.0)</option><option value="1.3">三色克制 (1.3)</option><option value="0.7">三色被克 (0.7)</option><option value="1.4">光暗克制 (1.4)</option><option value="0.6">光暗被克 (0.6)</option></select></div>
-    <div class="selector-item"><label>🃏 塔罗选择</label><select id="tarotSelect"><option value="none">无</option><option value="magician_single">魔术师单体 (+16%增伤)</option><option value="magician">魔术师 (+40%增伤)</option><option value="justice">正义 (暴击+15%爆伤)</option><option value="fool">愚者 (+10%增伤)</option><option value="tower">法皇/高塔 (+20%增伤)</option></select></div>
-</div>
 
     <div class="skill-row" style="margin-bottom: 20px;"><label>📐 技能倍率 (%)</label><input type="number" id="skill" value="100" min="0" step="5"></div>
 
     <div class="section-grid">
-        <!-- 攻击区间 -->
-<div class="section-card">
-    <div class="section-title">⚔️ 攻击区间 <span>显示攻击 / 实际攻击</span></div>
-    <div class="row"><div style="flex:2;"><label>基础攻击力</label><input type="number" id="atkBase" value="3000" min="0"></div></div>
-    <div class="row"><div><label>攻击BUFF</label><select id="atkBuff"><option value="0">无 (0%)</option><option value="10">攻击1 (10%)</option><option value="20">攻击2 (20%)</option><option value="30">攻击3 (30%)</option><option value="40">攻击4 (40%)</option></select></div></div>
-    <div class="row"><div><label>战旗</label><select id="flag"><option value="0">无 (0%)</option><option value="20">有战旗 (20%)</option></select></div><div><label>剑杖刻印</label><select id="swordScepter"><option value="0">不触发 (0%)</option><option value="4">一步 (4%)</option><option value="8">两步 (8%)</option><option value="12">三步以上 (12%)</option></select></div></div>
-    <div class="row"><div><label>基础光环</label><select id="basicAura"><option value="0">无 (0%)</option><option value="10">有 (10%)</option></select></div><div><label>协攻</label><select id="coordAttack"><option value="0">无 (0%)</option><option value="5">协攻1 (5%)</option><option value="10">协攻2 (10%)</option><option value="15">协攻3 (15%)</option></select></div></div>
-    <!-- 删除：个性、技能、武器、防具、其他加成 -->
-    <div id="customDisplayAtkContainer" style="margin-bottom: 10px;"></div>
-    <button id="addCustomDisplayAtkBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加显示攻击自定义条目</button>
-    <div class="stat-badge">攻击加成合计 = <span id="statNormalPercent">0</span>%</div>
-    <div class="stat-badge">
-        <span class="conversion-label">攻击转化 =</span>
-        <span id="statDisplayConversion">0</span>
-        <button id="openConversionBtnDisplay">⚡ 攻击转化</button>
+        <!-- 攻击区间（保持不变） -->
+        <div class="section-card">
+            <div class="section-title">⚔️ 攻击区间 <span>显示攻击 / 实际攻击</span></div>
+            <div class="row"><div style="flex:2;"><label>基础攻击力</label><input type="number" id="atkBase" value="3000" min="0"></div></div>
+            <div class="row"><div><label>攻击BUFF</label><select id="atkBuff"><option value="0">无 (0%)</option><option value="10">攻击1 (10%)</option><option value="20">攻击2 (20%)</option><option value="30">攻击3 (30%)</option><option value="40">攻击4 (40%)</option></select></div></div>
+            <div class="row"><div><label>战旗</label><select id="flag"><option value="0">无 (0%)</option><option value="20">有战旗 (20%)</option></select></div><div><label>剑杖刻印</label><select id="swordScepter"><option value="0">不触发 (0%)</option><option value="4">一步 (4%)</option><option value="8">两步 (8%)</option><option value="12">三步以上 (12%)</option></select></div></div>
+            <div class="row"><div><label>基础光环</label><select id="basicAura"><option value="0">无 (0%)</option><option value="10">有 (10%)</option></select></div><div><label>协攻</label><select id="coordAttack"><option value="0">无 (0%)</option><option value="5">协攻1 (5%)</option><option value="10">协攻2 (10%)</option><option value="15">协攻3 (15%)</option></select></div></div>
+            <!-- 显示攻击自定义条目 -->
+            <div id="customDisplayAtkContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomDisplayAtkBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加显示攻击自定义条目</button>
+            <div class="stat-badge">攻击加成合计 = <span id="statNormalPercent">0</span>%</div>
+            <div class="stat-badge">
+                <span class="conversion-label">攻击转化 =</span>
+                <span id="statDisplayConversion">0</span>
+                <button id="openConversionBtnDisplay">⚡ 攻击转化</button>
+            </div>
+            <div class="stat-badge">显示攻击 = <span id="statDisplayAtk">3000</span></div>
+            <div class="divider"></div>
+            <!-- 实际攻击部分 -->
+            <div class="row">
+                <div><label>高地</label><select id="highland"><option value="0">无 (0%)</option><option value="15">有 (15%)</option></select></div>
+                <div><label>低地</label><select id="lowland"><option value="0">无 (0%)</option><option value="-10">有 (-10%)</option></select></div>
+            </div>
+           <div class="row">
+    <div><label>倒吊人指挥官</label><select id="hangmanMark"><option value="0">无</option><option value="15">有 (+15%)</option></select></div>
+    <div><label>窥破弱点</label><select id="weaknessInsight"><option value="0">无 (0%)</option><option value="20">有 (20%)</option></select></div>
+</div>
+            <!-- 实际攻击自定义条目 -->
+            <div id="customActualAtkContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomActualAtkBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加实际攻击自定义条目</button>
+            <div class="stat-badge">实际额外加成合计 = <span id="statExtraPercent">0</span>%</div>
+            <div class="stat-badge">
+                <span class="conversion-label">攻击转化 =</span>
+                <span id="statActualConversion">0</span>
+                <button id="openConversionBtnActual">⚡ 攻击转化</button>
+            </div>
+            <div class="stat-badge">实际攻击 = <span id="statActualAtk">3000</span></div>
+        </div>
+
+        <!-- 防御区间（修改后） -->
+        <div class="section-card"><div class="section-title">🛡️ 防御区间 <span>最终防御力</span></div>
+            <div class="row"><div><label>基础防御力</label><input type="number" id="def" value="1500"></div></div>
+            <div class="row">
+                <div><label>防御降低</label><select id="defReduction"><option value="0">无 (0%)</option><option value="20">降低1 (20%)</option><option value="40">降低2 (40%)</option><option value="60">降低3 (60%)</option></select></div>
+                <div><label>锁定目标（号角）</label><select id="lockOn"><option value="0">无 (0%)</option><option value="20">锁定 (20%)</option></select></div>
+            </div>
+            <div class="row"><div><label>穿甲</label><select id="armorPiercing"><option value="0">无 (0%)</option><option value="40">有穿甲 (40%)</option></select></div><div></div></div>
+            
+            <!-- 新增：自定义固定值减防条目 -->
+            <div id="customDefFixedReductionContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomDefFixedReductionBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加自定义固定值减防条目</button>
+            
+            <!-- 原有：自定义降低防御条目 -->
+            <div id="customDefReductionContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomDefReductionBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加自定义降低防御条目</button>
+            
+            <!-- 原有：自定义无视防御条目 -->
+            <div id="customDefIgnoreContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomDefIgnoreBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加自定义无视防御条目</button>
+            
+            <!-- 新增：自定义防御提升条目 -->
+            <div id="customDefIncreaseContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomDefIncreaseBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加自定义防御提升条目</button>
+            
+            <div class="stat-badge">减益系数 <span id="statDebuffFactor">1.00x</span></div>
+            <div class="stat-badge">增益系数 <span id="statIncreaseFactor">1.00x</span></div>
+            <div class="stat-badge">无视系数 <span id="statIgnoreFinal">1.00x</span></div>
+            <div class="stat-badge">最终防御力 = <span id="statDefFinal">1500</span></div>
+        </div>
+
+        <!-- 增伤区间（保持不变） -->
+        <div class="section-card"><div class="section-title">💥 增伤区间 <span>总增伤乘数</span></div>
+            <div class="row"><div><label>伤害BUFF</label><select id="dmgBuff"><option value="0">无 (0%)</option><option value="10">伤害1 (10%)</option><option value="20">伤害2 (20%)</option><option value="30">伤害3 (30%)</option></select></div><div><label>流光</label><select id="flowLight"><option value="0">无 (0%)</option><option value="15">有流光 (15%)</option></select></div></div>
+            <div class="row"><div><label>背击</label><select id="backAttackDmg"><option value="0">无 (0%)</option><option value="30">有背击 (30%)</option></select></div><div></div></div>
+            <div id="customDmgIncContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomDmgIncBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加增伤自定义条目</button>
+            <div class="stat-badge">塔罗/职业 <span id="statExtraDmg">0%</span></div>
+            <div class="stat-badge">总增伤乘数 <span id="statInc">1.00x</span></div>
+        </div>
+
+        <!-- 爆伤区间（保持不变） -->
+        <div class="section-card"><div class="section-title">⚡ 爆伤区间 <span>基础130%</span></div>
+            <div class="row"><div><label>爆伤BUFF</label><select id="critBuff"><option value="0">无 (0%)</option><option value="15">爆伤1 (15%)</option><option value="30">爆伤2 (30%)</option><option value="45">爆伤3 (45%)</option></select></div><div><label>赫沙光环</label><select id="heshaAura"><option value="0">无 (0%)</option><option value="5">非艾拉曼 (5%)</option><option value="10">艾拉曼 (10%)</option></select></div></div>
+            <div class="row"><div><label>乌利亚转化</label><select id="uriaConvert"><option value="0">无 (0%)</option><option value="15">满层 (15%)</option></select></div><div><label>武器</label><select id="weaponCrit"><option value="0">无武器 (0%)</option><option value="30">虚无6层 (30%)</option><option value="21">天烈剑 (21%)</option><option value="30">披萨专 (30%)</option><option value="40">亲王刀 (40%)</option><option value="8">寻路者 (8%)</option></select></div></div>
+            <div id="customCritContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomCritBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加爆伤自定义条目</button>
+            <div class="stat-badge">额外爆伤 <span id="statExtraCrit">0%</span></div>
+            <div class="stat-badge">暴击爆伤乘数 <span id="statCrit">1.30x</span></div>
+        </div>
+
+        <!-- 最终增伤（保持不变） -->
+        <div class="section-card"><div class="section-title">✨ 最终增伤区间 <span>独立乘区</span></div>
+            <div class="row"><div><label>最终增伤技能</label><select id="finalDmgSkill"><option value="0">无</option><option value="50">杰洛特阿尔德法印·冲击 (50%)</option><option value="100">SP阿列克谢 暴怒 (100%)</option><option value="10">伊凡大帝个性 (10%)</option></select></div></div>
+            <div id="customFinalDmgContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomFinalDmgBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加最终增伤自定义条目</button>
+            <div class="stat-badge">最终增伤乘数 = <span id="statFinalMult">1.00x</span></div>
+        </div>
+
+        <!-- 易伤区间（保持不变） -->
+        <div class="section-card"><div class="section-title">🎯 易伤区间 <span>相乘上限300%</span></div>
+            <div class="row"><div><label>易伤BUFF</label><select id="takenBuff"><option value="0">无 (0%)</option><option value="10">易伤1 (10%)</option><option value="20">易伤2 (20%)</option><option value="30">易伤3 (30%)</option><option value="300">满易伤 (300%)</option></select></div><div><label>受伤程度</label><select id="injuryLevel"><option value="0">健康 (0%)</option><option value="20">受伤 (20%)</option><option value="30">濒死 (30%)</option></select></div></div>
+            <div class="row"><div><label>审判</label><select id="judgment"><option value="0">无 (0%)</option><option value="10">有 (10%)</option></select></div><div><label>英灵</label><select id="soul"><option value="0">无 (0%)</option><option value="10">有 (10%)</option></select></div></div>
+            <div class="row"><div><label>号角</label><select id="horn"><option value="0">无 (0%)</option><option value="80">有号角 (80%)</option></select></div><div><label>萨曼莎审判</label><select id="samanthaJudgment"><option value="0">无 (0%)</option><option value="10">有 (10%)</option><option value="15">范围伤害 (15%)</option></select></div></div>
+            <div id="customTakenContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomTakenBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加易伤自定义条目</button>
+            <div class="stat-badge">最终易伤乘数 = <span id="statTaken">1.00x</span> (上限3.00x)</div>
+        </div>
     </div>
-    <div class="stat-badge">显示攻击 = <span id="statDisplayAtk">3000</span></div>
-    <div class="divider"></div>
-    <!-- 实际攻击部分 -->
-    <div class="row">
-        <div><label>高地</label><select id="highland"><option value="0">无 (0%)</option><option value="15">有 (15%)</option></select></div>
-        <div><label>低地</label><select id="lowland"><option value="0">无 (0%)</option><option value="-10">有 (-10%)</option></select></div>
-    </div>
-    <div class="row"><div><label>狮子变身</label><select id="lionTransform"><option value="0">不变身 (0%)</option><option value="40">变身 (40%)</option></select></div>
-    <div><label>倒吊人指挥官</label><select id="hangmanMark"><option value="0">无</option><option value="15">有 (+15%)</option></select></div></div>
-    <div class="row"><div><label>窥破弱点</label><select id="weaknessInsight"><option value="0">无 (0%)</option><option value="20">有 (20%)</option></select></div>
-    <div></div></div>
-    <!-- 删除手动加成%行，替换为自定义条目 -->
-    <div id="customActualAtkContainer" style="margin-bottom: 10px;"></div>
-    <button id="addCustomActualAtkBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加实际攻击自定义条目</button>
-    <div class="stat-badge">实际额外加成合计 = <span id="statExtraPercent">0</span>%</div>
-    <div class="stat-badge">
-        <span class="conversion-label">攻击转化 =</span>
-        <span id="statActualConversion">0</span>
-        <button id="openConversionBtnActual">⚡ 攻击转化</button>
-    </div>
-    <div class="stat-badge">实际攻击 = <span id="statActualAtk">3000</span></div>
-</div>
-
-        <!-- 防御区间 -->
-<div class="section-card"><div class="section-title">🛡️ 防御区间 <span>最终防御力</span></div>
-    <div class="row"><div><label>基础防御力</label><input type="number" id="def" value="1500"></div></div>
-    <!-- 删除手动减益和手动无视 -->
-    <div class="row"><div><label>防御降低</label><select id="defReduction"><option value="0">无 (0%)</option><option value="20">降低1 (20%)</option><option value="40">降低2 (40%)</option><option value="60">降低3 (60%)</option></select></div><div><label>锁定目标</label><select id="lockOn"><option value="0">无 (0%)</option><option value="20">锁定 (20%)</option></select></div></div>
-    <div class="row"><div><label>穿甲</label><select id="armorPiercing"><option value="0">无 (0%)</option><option value="40">有穿甲 (40%)</option></select></div><div></div></div>
-    <!-- 新增手动降低防御自定义条目 -->
-    <div id="customDefReductionContainer" style="margin-bottom: 10px;"></div>
-    <button id="addCustomDefReductionBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加手动降低防御条目</button>
-    <!-- 新增手动无视防御自定义条目 -->
-    <div id="customDefIgnoreContainer" style="margin-bottom: 10px;"></div>
-    <button id="addCustomDefIgnoreBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加手动无视防御条目</button>
-    <div class="stat-badge">减益系数 <span id="statDebuffFactor">1.00x</span></div>
-    <div class="stat-badge">无视系数 <span id="statIgnoreFinal">1.00x</span></div>
-    <div class="stat-badge">最终防御力 = <span id="statDefFinal">1500</span></div>
-</div>
-
-        <!-- 增伤区间 -->
-<div class="section-card"><div class="section-title">💥 增伤区间 <span>总增伤乘数</span></div>
-    <div class="row"><div><label>伤害BUFF</label><select id="dmgBuff"><option value="0">无 (0%)</option><option value="10">伤害1 (10%)</option><option value="20">伤害2 (20%)</option><option value="30">伤害3 (30%)</option></select></div><div><label>流光</label><select id="flowLight"><option value="0">无 (0%)</option><option value="15">有流光 (15%)</option></select></div></div>
-    <div class="row"><div><label>背击</label><select id="backAttackDmg"><option value="0">无 (0%)</option><option value="30">有背击 (30%)</option></select></div><div></div></div>
-    <!-- 删除个性、技能、武器、防具、其他增伤 -->
-    <div id="customDmgIncContainer" style="margin-bottom: 10px;"></div>
-    <button id="addCustomDmgIncBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加增伤自定义条目</button>
-    <div class="stat-badge">塔罗/职业 <span id="statExtraDmg">0%</span></div>
-    <div class="stat-badge">总增伤乘数 <span id="statInc">1.00x</span></div>
-</div>
-
-        <!-- 爆伤区间 -->
-<div class="section-card"><div class="section-title">⚡ 爆伤区间 <span>基础130%</span></div>
-    <div class="row"><div><label>爆伤BUFF</label><select id="critBuff"><option value="0">无 (0%)</option><option value="15">爆伤1 (15%)</option><option value="30">爆伤2 (30%)</option><option value="45">爆伤3 (45%)</option></select></div><div><label>赫沙光环</label><select id="heshaAura"><option value="0">无 (0%)</option><option value="5">非艾拉曼 (5%)</option><option value="10">艾拉曼 (10%)</option></select></div></div>
-    <div class="row"><div><label>乌利亚转化</label><select id="uriaConvert"><option value="0">无 (0%)</option><option value="15">满层 (15%)</option></select></div><div><label>武器</label><select id="weaponCrit"><option value="0">无武器 (0%)</option><option value="30">虚无6层 (30%)</option><option value="21">天烈剑 (21%)</option><option value="30">披萨专 (30%)</option><option value="40">亲王刀 (40%)</option><option value="8">寻路者 (8%)</option></select></div></div>
-    <div id="customCritContainer" style="margin-bottom: 10px;"></div>
-    <button id="addCustomCritBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加爆伤自定义条目</button>
-    <div class="stat-badge">额外爆伤 <span id="statExtraCrit">0%</span></div>
-    <div class="stat-badge">暴击爆伤乘数 <span id="statCrit">1.30x</span></div>
-</div>
-
-        <!-- 最终增伤 -->
-<div class="section-card"><div class="section-title">✨ 最终增伤区间 <span>独立乘区</span></div>
-    <div class="row"><div><label>最终增伤技能</label><select id="finalDmgSkill"><option value="0">无</option><option value="50">杰洛特阿尔德法印·冲击 (50%)</option><option value="100">SP阿列克谢 暴怒 (100%)</option><option value="10">伊凡大帝个性 (10%)</option></select></div></div>
-    <!-- 删除手动输入 -->
-    <div id="customFinalDmgContainer" style="margin-bottom: 10px;"></div>
-    <button id="addCustomFinalDmgBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加最终增伤自定义条目</button>
-    <div class="stat-badge">最终增伤乘数 = <span id="statFinalMult">1.00x</span></div>
-</div>
-
-        <!-- 易伤区间 -->
-<div class="section-card"><div class="section-title">🎯 易伤区间 <span>相乘上限300%</span></div>
-    <div class="row"><div><label>易伤BUFF</label><select id="takenBuff"><option value="0">无 (0%)</option><option value="10">易伤1 (10%)</option><option value="20">易伤2 (20%)</option><option value="30">易伤3 (30%)</option><option value="300">满易伤 (300%)</option></select></div><div><label>受伤程度</label><select id="injuryLevel"><option value="0">健康 (0%)</option><option value="20">受伤 (20%)</option><option value="30">濒死 (30%)</option></select></div></div>
-    <div class="row"><div><label>审判</label><select id="judgment"><option value="0">无 (0%)</option><option value="10">有 (10%)</option></select></div><div><label>英灵</label><select id="soul"><option value="0">无 (0%)</option><option value="10">有 (10%)</option></select></div></div>
-    <div class="row"><div><label>号角</label><select id="horn"><option value="0">无 (0%)</option><option value="80">有号角 (80%)</option></select></div><div><label>萨曼莎审判</label><select id="samanthaJudgment"><option value="0">无 (0%)</option><option value="10">有 (10%)</option><option value="15">范围伤害 (15%)</option></select></div></div>
-    <!-- 删除手动输入，替换为自定义条目 -->
-    <div id="customTakenContainer" style="margin-bottom: 10px;"></div>
-    <button id="addCustomTakenBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加易伤自定义条目</button>
-    <div class="stat-badge">最终易伤乘数 = <span id="statTaken">1.00x</span> (上限3.00x)</div>
-</div>
-</div>
 
     <div class="result-panel">
         <div class="result-row">

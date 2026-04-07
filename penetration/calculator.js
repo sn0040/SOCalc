@@ -1,22 +1,25 @@
 // penetration/calculator.js
 import { preloadScreenshot, loadHtml2Canvas, showLoading, hideLoading, showScreenshotError } from '../common/screenshot.js';
-import { computeConversionValue, createConversionManager } from '../common/conversion.js';
 
-// ================= 自定义最终增伤条目（全局） =================
-// 自定义最终增伤条目
-let customFinalDmgEntries = [];
-// 显示攻击自定义条目
+// ================= 自定义条目数组（全局） =================
 let customDisplayAtkEntries = [];
-// 实际攻击自定义条目
 let customActualAtkEntries = [];
-// 生命值结算自定义条目
 let customLifeBonusEntries = [];
-// 穿透增伤自定义条目
 let customPenDmgEntries = [];
-// 穿透易伤自定义条目
 let customPenVulnEntries = [];
+let customFinalDmgEntries = [];
 
-// 通用渲染函数模板，为避免重复，我们可以定义一个工厂函数，但为了清晰，分别实现
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+// ================= 渲染函数 =================
 function renderCustomDisplayAtkEntries() {
     const container = document.getElementById('customDisplayAtkContainer');
     if (!container) return;
@@ -53,7 +56,6 @@ function addCustomDisplayAtkEntry() {
     updatePenetration();
 }
 
-// 实际攻击自定义条目
 function renderCustomActualAtkEntries() {
     const container = document.getElementById('customActualAtkContainer');
     if (!container) return;
@@ -90,7 +92,6 @@ function addCustomActualAtkEntry() {
     updatePenetration();
 }
 
-// 生命值结算自定义条目
 function renderCustomLifeBonusEntries() {
     const container = document.getElementById('customLifeBonusContainer');
     if (!container) return;
@@ -127,7 +128,6 @@ function addCustomLifeBonusEntry() {
     updatePenetration();
 }
 
-// 穿透增伤自定义条目
 function renderCustomPenDmgEntries() {
     const container = document.getElementById('customPenDmgContainer');
     if (!container) return;
@@ -164,7 +164,6 @@ function addCustomPenDmgEntry() {
     updatePenetration();
 }
 
-// 穿透易伤自定义条目
 function renderCustomPenVulnEntries() {
     const container = document.getElementById('customPenVulnContainer');
     if (!container) return;
@@ -201,20 +200,6 @@ function addCustomPenVulnEntry() {
     updatePenetration();
 }
 
-window.customFinalDmgEntries = customFinalDmgEntries;
-window.renderCustomFinalDmgEntries = renderCustomFinalDmgEntries;
-window.escapeHtml = escapeHtml;
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
-}
-
 function renderCustomFinalDmgEntries() {
     const container = document.getElementById('customFinalDmgContainer');
     if (!container) return;
@@ -233,9 +218,7 @@ function renderCustomFinalDmgEntries() {
         const nameInput = div.querySelector('.custom-name');
         const percentInput = div.querySelector('.custom-percent');
         const delBtn = div.querySelector('.delete-custom');
-        nameInput.addEventListener('change', () => {
-            customFinalDmgEntries[i].name = nameInput.value;
-        });
+        nameInput.addEventListener('change', () => { customFinalDmgEntries[i].name = nameInput.value; });
         percentInput.addEventListener('input', () => {
             customFinalDmgEntries[i].percent = parseFloat(percentInput.value) || 0;
             updatePenetration();
@@ -248,74 +231,164 @@ function renderCustomFinalDmgEntries() {
         container.appendChild(div);
     }
 }
-
 function addCustomFinalDmgEntry() {
     customFinalDmgEntries.push({ name: '新条目', percent: 0 });
     renderCustomFinalDmgEntries();
     updatePenetration();
 }
 
+// ================= 攻击转化相关（支持单攻/双攻） =================
+let singleDisplayConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+let singleActualConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+let singleDisplayConversion = 0;
+let singleActualConversion = 0;
+let physConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+let magicConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+let physConversion = 0;
+let magicConversion = 0;
 
-// ================= 攻击转化相关 =================
-let displayConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
-let actualConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
-let displayAttackConversion = 0;
-let actualAttackConversion = 0;
+let attackMode = 'single'; // 'single' 或 'double'
 
-const displayConvManager = createConversionManager({
-    modalId: 'conversionModal',
-    titleElementId: 'conversionTitle',
-    closeBtnId: 'closeConversionModal',
-    applyBtnId: 'applyConversionBtn',
-    resetBtnId: 'resetConversionBtn',
-    convBaseId: 'convBaseValue',
-    convMultiplierId: 'convMultiplier',
-    convBonusId: 'convBonus',
-    convHiddenBonusId: 'convHiddenBonus',
-    convResultId: 'convResultValue',
-    paramsStore: displayConvParams,
-    onUpdate: (newValue) => {
-        displayAttackConversion = newValue;
+function computeConversionValue(base, mult, bonus, hiddenBonus) {
+    const multiplier = mult / 100;
+    const bonusTotal = (bonus + hiddenBonus) / 100;
+    return base * (1 + bonusTotal) * multiplier;
+}
+
+singleDisplayConversion = computeConversionValue(singleDisplayConvParams.base, singleDisplayConvParams.multiplier, singleDisplayConvParams.bonus, singleDisplayConvParams.hiddenBonus);
+singleActualConversion = computeConversionValue(singleActualConvParams.base, singleActualConvParams.multiplier, singleActualConvParams.bonus, singleActualConvParams.hiddenBonus);
+physConversion = computeConversionValue(physConvParams.base, physConvParams.multiplier, physConvParams.bonus, physConvParams.hiddenBonus);
+magicConversion = computeConversionValue(magicConvParams.base, magicConvParams.multiplier, magicConvParams.bonus, magicConvParams.hiddenBonus);
+
+function openSingleDisplayModal() {
+    const title = '显示攻击转化';
+    document.getElementById('conversionTitle').innerText = title;
+    document.getElementById('convBaseValue').value = singleDisplayConvParams.base;
+    document.getElementById('convMultiplier').value = singleDisplayConvParams.multiplier;
+    document.getElementById('convBonus').value = singleDisplayConvParams.bonus;
+    document.getElementById('convHiddenBonus').value = singleDisplayConvParams.hiddenBonus;
+    const result = computeConversionValue(singleDisplayConvParams.base, singleDisplayConvParams.multiplier, singleDisplayConvParams.bonus, singleDisplayConvParams.hiddenBonus);
+    document.getElementById('convResultValue').innerText = Math.round(result);
+    document.getElementById('conversionModal').classList.add('active');
+    window._currentConversionCallback = (params) => {
+        singleDisplayConvParams = params;
+        singleDisplayConversion = computeConversionValue(params.base, params.multiplier, params.bonus, params.hiddenBonus);
         updatePenetration();
-    }
-});
-const actualConvManager = createConversionManager({
-    modalId: 'conversionModal',
-    titleElementId: 'conversionTitle',
-    closeBtnId: 'closeConversionModal',
-    applyBtnId: 'applyConversionBtn',
-    resetBtnId: 'resetConversionBtn',
-    convBaseId: 'convBaseValue',
-    convMultiplierId: 'convMultiplier',
-    convBonusId: 'convBonus',
-    convHiddenBonusId: 'convHiddenBonus',
-    convResultId: 'convResultValue',
-    paramsStore: actualConvParams,
-    onUpdate: (newValue) => {
-        actualAttackConversion = newValue;
+    };
+}
+function openSingleActualModal() {
+    const title = '实际攻击转化';
+    document.getElementById('conversionTitle').innerText = title;
+    document.getElementById('convBaseValue').value = singleActualConvParams.base;
+    document.getElementById('convMultiplier').value = singleActualConvParams.multiplier;
+    document.getElementById('convBonus').value = singleActualConvParams.bonus;
+    document.getElementById('convHiddenBonus').value = singleActualConvParams.hiddenBonus;
+    const result = computeConversionValue(singleActualConvParams.base, singleActualConvParams.multiplier, singleActualConvParams.bonus, singleActualConvParams.hiddenBonus);
+    document.getElementById('convResultValue').innerText = Math.round(result);
+    document.getElementById('conversionModal').classList.add('active');
+    window._currentConversionCallback = (params) => {
+        singleActualConvParams = params;
+        singleActualConversion = computeConversionValue(params.base, params.multiplier, params.bonus, params.hiddenBonus);
         updatePenetration();
+    };
+}
+function openPhysModal() {
+    const title = '物攻转化';
+    document.getElementById('conversionTitle').innerText = title;
+    document.getElementById('convBaseValue').value = physConvParams.base;
+    document.getElementById('convMultiplier').value = physConvParams.multiplier;
+    document.getElementById('convBonus').value = physConvParams.bonus;
+    document.getElementById('convHiddenBonus').value = physConvParams.hiddenBonus;
+    const result = computeConversionValue(physConvParams.base, physConvParams.multiplier, physConvParams.bonus, physConvParams.hiddenBonus);
+    document.getElementById('convResultValue').innerText = Math.round(result);
+    document.getElementById('conversionModal').classList.add('active');
+    window._currentConversionCallback = (params) => {
+        physConvParams = params;
+        physConversion = computeConversionValue(params.base, params.multiplier, params.bonus, params.hiddenBonus);
+        updatePenetration();
+    };
+}
+function openMagicModal() {
+    const title = '魔攻转化';
+    document.getElementById('conversionTitle').innerText = title;
+    document.getElementById('convBaseValue').value = magicConvParams.base;
+    document.getElementById('convMultiplier').value = magicConvParams.multiplier;
+    document.getElementById('convBonus').value = magicConvParams.bonus;
+    document.getElementById('convHiddenBonus').value = magicConvParams.hiddenBonus;
+    const result = computeConversionValue(magicConvParams.base, magicConvParams.multiplier, magicConvParams.bonus, magicConvParams.hiddenBonus);
+    document.getElementById('convResultValue').innerText = Math.round(result);
+    document.getElementById('conversionModal').classList.add('active');
+    window._currentConversionCallback = (params) => {
+        magicConvParams = params;
+        magicConversion = computeConversionValue(params.base, params.multiplier, params.bonus, params.hiddenBonus);
+        updatePenetration();
+    };
+}
+function closeConversionModal() {
+    document.getElementById('conversionModal').classList.remove('active');
+}
+function applyConversion() {
+    const params = {
+        base: parseFloat(document.getElementById('convBaseValue').value) || 0,
+        multiplier: parseFloat(document.getElementById('convMultiplier').value) || 0,
+        bonus: parseFloat(document.getElementById('convBonus').value) || 0,
+        hiddenBonus: parseFloat(document.getElementById('convHiddenBonus').value) || 0
+    };
+    if (window._currentConversionCallback) {
+        window._currentConversionCallback(params);
+        window._currentConversionCallback = null;
     }
-});
+    closeConversionModal();
+}
+function resetConversion() {
+    const title = document.getElementById('conversionTitle').innerText;
+    if (title.includes('显示攻击转化')) {
+        singleDisplayConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+        singleDisplayConversion = 0;
+        openSingleDisplayModal();
+    } else if (title.includes('实际攻击转化')) {
+        singleActualConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+        singleActualConversion = 0;
+        openSingleActualModal();
+    } else if (title.includes('物攻转化')) {
+        physConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+        physConversion = 0;
+        openPhysModal();
+    } else if (title.includes('魔攻转化')) {
+        magicConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+        magicConversion = 0;
+        openMagicModal();
+    }
+    updatePenetration();
+}
 
-displayAttackConversion = computeConversionValue(displayConvParams.base, displayConvParams.multiplier, displayConvParams.bonus, displayConvParams.hiddenBonus);
-actualAttackConversion = computeConversionValue(actualConvParams.base, actualConvParams.multiplier, actualConvParams.bonus, actualConvParams.hiddenBonus);
-
-// DOM 元素
-const penAtkBase = document.getElementById('penAtkBase');
+// ================= DOM 元素引用 =================
+const penAtkBaseSingle = document.getElementById('penAtkBaseSingle');
+const penNormalPercentSingle = document.getElementById('penNormalPercentSingle');
+const statDisplayConversionSingle = document.getElementById('statDisplayConversionSingle');
+const penDisplayAtkSingle = document.getElementById('penDisplayAtkSingle');
+const penExtraPercentSingle = document.getElementById('penExtraPercentSingle');
+const statActualConversionSingle = document.getElementById('statActualConversionSingle');
+const penActualAtkSingle = document.getElementById('penActualAtkSingle');
+const penAtkPhys = document.getElementById('penAtkPhys');
+const penAtkMagic = document.getElementById('penAtkMagic');
+const penNormalPercentDouble = document.getElementById('penNormalPercentDouble');
+const statPhysConversion = document.getElementById('statPhysConversion');
+const penPhysDisplay = document.getElementById('penPhysDisplay');
+const statMagicConversion = document.getElementById('statMagicConversion');
+const penMagicDisplay = document.getElementById('penMagicDisplay');
+const penExtraPercentDouble = document.getElementById('penExtraPercentDouble');
+const penPhysActual = document.getElementById('penPhysActual');
+const penMagicActual = document.getElementById('penMagicActual');
 const penAtkBuff = document.getElementById('penAtkBuff');
 const penFlag = document.getElementById('penFlag');
 const penSwordScepter = document.getElementById('penSwordScepter');
 const penBasicAura = document.getElementById('penBasicAura');
 const penCoordAttack = document.getElementById('penCoordAttack');
-const penAtkPersonality = document.getElementById('penAtkPersonality');
-const penAtkSkill = document.getElementById('penAtkSkill');
-const penAtkWeapon = document.getElementById('penAtkWeapon');
-const penAtkArmor = document.getElementById('penAtkArmor');
-const penAtkPercent = document.getElementById('penAtkPercent');
 const penHighland = document.getElementById('penHighland');
+const penLowland = document.getElementById('penLowland');
 const penHangmanMark = document.getElementById('penHangmanMark');
 const penWeaknessInsight = document.getElementById('penWeaknessInsight');
-const penAtkManual = document.getElementById('penAtkManual');
 const penProfession = document.getElementById('penProfession');
 const penWeakness = document.getElementById('penWeakness');
 const penTarot = document.getElementById('penTarot');
@@ -323,12 +396,7 @@ const penLifeType = document.getElementById('penLifeType');
 const penLifeValue = document.getElementById('penLifeValue');
 const penLifeAtk = document.getElementById('penLifeAtk');
 const penLifeTargetHp = document.getElementById('penLifeTargetHp');
-const penBonusNewborn = document.getElementById('penBonusNewborn');
-const penBonusArmor = document.getElementById('penBonusArmor');
-const penBonusPersonality = document.getElementById('penBonusPersonality');
-const penBonusReaction = document.getElementById('penBonusReaction');
 const penSkillMult = document.getElementById('penSkillMult');
-const penDmgBonus = document.getElementById('penDmgBonus');
 const penDreamTalk = document.getElementById('penDreamTalk');
 const penLukarAura = document.getElementById('penLukarAura');
 const penIsilindAura = document.getElementById('penIsilindAura');
@@ -345,15 +413,6 @@ const penPuppet = document.getElementById('penPuppet');
 const penNightmare = document.getElementById('penNightmare');
 const penPenVuln = document.getElementById('penPenVuln');
 const penImmunity = document.getElementById('penImmunity');
-const penVulnManual = document.getElementById('penVulnManual');
-
-// 显示元素
-const penNormalPercentSpan = document.getElementById('penNormalPercent');
-const penExtraPercentSpan = document.getElementById('penExtraPercent');
-const penDisplayAtkSpan = document.getElementById('penDisplayAtk');
-const penActualAtkSpan = document.getElementById('penActualAtk');
-const statDisplayConversionSpan = document.getElementById('statDisplayConversion');
-const statActualConversionSpan = document.getElementById('statActualConversion');
 const penLifeBaseSpan = document.getElementById('penLifeBase');
 const penBonusTotalSpan = document.getElementById('penBonusTotal');
 const penLifeResultSpan = document.getElementById('penLifeResult');
@@ -370,38 +429,116 @@ function getProfAtkBonus() {
     if (prof === 'watcher') return 12;
     return 0;
 }
+function getNormalPercent() {
+    let base = (parseFloat(penAtkBuff.value) || 0) +
+               (parseFloat(penFlag.value) || 0) +
+               (parseFloat(penSwordScepter.value) || 0) +
+               (parseFloat(penBasicAura.value) || 0) +
+               (parseFloat(penCoordAttack.value) || 0);
+    base += getProfAtkBonus();
+    let customSum = customDisplayAtkEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
+    base += customSum;
+    return base;
+}
+function getExtraPercent() {
+    let base = (parseFloat(penHighland.value) || 0) +
+               (parseFloat(penLowland.value) || 0) +
+               (parseFloat(penHangmanMark.value) || 0) +
+               (parseFloat(penWeaknessInsight.value) || 0);
+    let customSum = customActualAtkEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
+    base += customSum;
+    return base;
+}
+function getSingleDisplayAtk() {
+    let atkBase = parseFloat(penAtkBaseSingle.value) || 0;
+    let normalPercent = getNormalPercent();
+    return atkBase * (1 + normalPercent / 100) + singleDisplayConversion;
+}
+function getSingleActualAtk() {
+    let atkBase = parseFloat(penAtkBaseSingle.value) || 0;
+    let normalPercent = getNormalPercent();
+    let displayAtk = atkBase * (1 + normalPercent / 100) + singleDisplayConversion;
+    let extraPercent = getExtraPercent();
+    return displayAtk + atkBase * (extraPercent / 100) + singleActualConversion;
+}
+function getPhysDisplayAtk() {
+    let physBase = parseFloat(penAtkPhys.value) || 0;
+    let normalPercent = getNormalPercent();
+    return physBase * (1 + normalPercent / 100) + physConversion;
+}
+function getMagicDisplayAtk() {
+    let magicBase = parseFloat(penAtkMagic.value) || 0;
+    let normalPercent = getNormalPercent();
+    return magicBase * (1 + normalPercent / 100) + magicConversion;
+}
+function getPhysActualAtk() {
+    let physBase = parseFloat(penAtkPhys.value) || 0;
+    let normalPercent = getNormalPercent();
+    let displayAtk = physBase * (1 + normalPercent / 100) + physConversion;
+    let extraPercent = getExtraPercent();
+    return displayAtk + physBase * (extraPercent / 100);
+}
+function getMagicActualAtk() {
+    let magicBase = parseFloat(penAtkMagic.value) || 0;
+    let normalPercent = getNormalPercent();
+    let displayAtk = magicBase * (1 + normalPercent / 100) + magicConversion;
+    let extraPercent = getExtraPercent();
+    return displayAtk + magicBase * (extraPercent / 100);
+}
+function getActualAttackForDamage() {
+    if (attackMode === 'single') {
+        return getSingleActualAtk();
+    } else {
+        return getPhysActualAtk() + getMagicActualAtk();
+    }
+}
+function updateAttackUI() {
+    const singleArea = document.getElementById('singleAttackArea');
+    const doubleArea = document.getElementById('doubleAttackArea');
+    const singleDisplay = document.getElementById('singleDisplayArea');
+    const doubleDisplay = document.getElementById('doubleDisplayArea');
+    const singleActual = document.getElementById('singleActualArea');
+    const doubleActual = document.getElementById('doubleActualArea');
 
-function computeActualAtk() {
-    let atkBase = getNum('penAtkBase');
-    let normalPercent = 0;
-    normalPercent += getNum('penAtkBuff');
-    normalPercent += getNum('penFlag');
-    normalPercent += getNum('penSwordScepter');
-    normalPercent += getNum('penBasicAura');
-    normalPercent += getNum('penCoordAttack');
-    // 注意：已经删除了个性、技能、武器、防具、其他加成等
-    // 加上自定义显示攻击条目
-    let customDisplaySum = customDisplayAtkEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
-    normalPercent += customDisplaySum;
-    normalPercent += getProfAtkBonus();
-    penNormalPercentSpan.textContent = normalPercent.toFixed(1);
-    statDisplayConversionSpan.textContent = Math.round(displayAttackConversion);
-    let displayAtk = atkBase * (1 + normalPercent / 100) + displayAttackConversion;
-    penDisplayAtkSpan.textContent = Math.round(displayAtk);
-    let extraPercent = 0;
-    extraPercent += getNum('penHighland');
-    extraPercent += parseFloat(document.getElementById('penLowland').value) || 0;
-    extraPercent += getNum('penHangmanMark');
-    extraPercent += getNum('penWeaknessInsight');
-    // 加上自定义实际攻击条目
-    let customActualSum = customActualAtkEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
-    extraPercent += customActualSum;
-    penExtraPercentSpan.textContent = extraPercent.toFixed(1);
-    statActualConversionSpan.textContent = Math.round(actualAttackConversion);
-    let extraTerm = atkBase * (extraPercent / 100);
-    let actualAtk = displayAtk + extraTerm + actualAttackConversion;
-    penActualAtkSpan.textContent = Math.round(actualAtk);
-    return actualAtk;
+    if (attackMode === 'single') {
+        // 隐藏双攻区域，显示单攻区域
+        singleArea.style.display = 'block';
+        doubleArea.style.display = 'none';
+        singleDisplay.style.display = 'block';
+        doubleDisplay.style.display = 'none';
+        singleActual.style.display = 'block';
+        doubleActual.style.display = 'none';
+
+        // 更新单攻数值
+        const normalPercent = getNormalPercent();
+        const extraPercent = getExtraPercent();
+        penNormalPercentSingle.innerText = normalPercent.toFixed(1);
+        statDisplayConversionSingle.innerText = Math.round(singleDisplayConversion);
+        penDisplayAtkSingle.innerText = Math.round(getSingleDisplayAtk());
+        penExtraPercentSingle.innerText = extraPercent.toFixed(1);
+        statActualConversionSingle.innerText = Math.round(singleActualConversion);
+        penActualAtkSingle.innerText = Math.round(getSingleActualAtk());
+    } else {
+        // 隐藏单攻区域，显示双攻区域
+        singleArea.style.display = 'none';
+        doubleArea.style.display = 'block';
+        singleDisplay.style.display = 'none';
+        doubleDisplay.style.display = 'block';
+        singleActual.style.display = 'none';
+        doubleActual.style.display = 'block';
+
+        // 更新双攻数值
+        const normalPercent = getNormalPercent();
+        const extraPercent = getExtraPercent();
+        penNormalPercentDouble.innerText = normalPercent.toFixed(1);
+        statPhysConversion.innerText = Math.round(physConversion);
+        penPhysDisplay.innerText = Math.round(getPhysDisplayAtk());
+        statMagicConversion.innerText = Math.round(magicConversion);
+        penMagicDisplay.innerText = Math.round(getMagicDisplayAtk());
+        penExtraPercentDouble.innerText = extraPercent.toFixed(1);
+        penPhysActual.innerText = Math.round(getPhysActualAtk());
+        penMagicActual.innerText = Math.round(getMagicActualAtk());
+    }
 }
 
 function computeLifeBase() {
@@ -412,7 +549,6 @@ function computeLifeBase() {
     if (type === 'hpPercent') return getNum('penLifeTargetHp') * rate;
     return 0;
 }
-
 function computeBonusTotal() {
     let total = 0;
     let customSum = customLifeBonusEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
@@ -420,7 +556,6 @@ function computeBonusTotal() {
     if (penTarot.value === 'fool' && penLifeType.value === 'hpPercent') total += 20;
     return total;
 }
-
 function getPenetrationDmgBonus() {
     let bonus = 0;
     if (penTarot.value === 'death') bonus += 13;
@@ -439,7 +574,6 @@ function getPenetrationDmgBonus() {
     bonus += customSum;
     return bonus;
 }
-
 function computeVulnMult() {
     let woundLayers = parseInt(penWoundLayers.value) || 0;
     let woundMult = Math.pow(1.12, woundLayers);
@@ -457,13 +591,11 @@ function computeVulnMult() {
     penVulnMultSpan.textContent = total.toFixed(2) + 'x';
     return total;
 }
-
 function toggleBonusOptions() {
     const showBonus = (penLifeType.value === 'hpPercent');
     if (penBonusOptionsDiv) penBonusOptionsDiv.style.display = showBonus ? 'block' : 'none';
     if (penBonusSectionDiv) penBonusSectionDiv.style.display = showBonus ? 'block' : 'none';
 }
-
 function toggleLifeRows() {
     const type = penLifeType.value;
     const hpRow = document.getElementById('penLifeHpRow');
@@ -473,9 +605,8 @@ function toggleLifeRows() {
     else { hpRow.style.display = 'none'; atkRow.style.display = 'none'; }
     toggleBonusOptions();
 }
-
 function updatePenetration() {
-    let actualAtk = computeActualAtk();
+    let actualAtk = getActualAttackForDamage();
     let skillMult = getNum('penSkillMult') / 100;
     let weakness = parseFloat(penWeakness.value) || 1.0;
     let attackPart = actualAtk * weakness * skillMult;
@@ -496,95 +627,134 @@ function updatePenetration() {
     penDmgMultSpan.textContent = dmgMult.toFixed(2) + 'x';
     let vulnMult = computeVulnMult();
     penVulnMultSpan.textContent = vulnMult.toFixed(2) + 'x';
-// 计算最终增伤乘数（大帝寒境 + 自定义条目，乘算）
-let emperorCold = parseFloat(document.getElementById('penEmperorCold').value) || 0;
-let finalMult = (1 + emperorCold / 100);
-for (let entry of customFinalDmgEntries) {
-    finalMult *= (1 + (entry.percent || 0) / 100);
-}
-document.getElementById('finalDmgMult').innerText = finalMult.toFixed(2) + 'x';
-
-let finalDamage = (attackPart + finalLifePart) * dmgMult * vulnMult * finalMult;
+    let emperorCold = parseFloat(penEmperorCold.value) || 0;
+    let finalMult = (1 + emperorCold / 100);
+    for (let entry of customFinalDmgEntries) {
+        finalMult *= (1 + (entry.percent || 0) / 100);
+    }
+    document.getElementById('finalDmgMult').innerText = finalMult.toFixed(2) + 'x';
+    let finalDamage = (attackPart + finalLifePart) * dmgMult * vulnMult * finalMult;
     finalDamage = Math.round(finalDamage);
     penDamageDisplay.innerHTML = `<small>✨</small> ${finalDamage}`;
+    updateAttackUI();
 }
-
 function resetAll() {
-    penAtkBase.value = '3000'; penAtkBuff.value = '0'; penFlag.value = '0'; penSwordScepter.value = '0';
-    penBasicAura.value = '0'; penCoordAttack.value = '0'; penAtkPersonality.value = '0'; penAtkSkill.value = '0';
-    penAtkWeapon.value = '0'; penAtkArmor.value = '0'; penAtkPercent.value = '0'; penHighland.value = '0';
-    penHangmanMark.value = '0'; penWeaknessInsight.value = '0'; penAtkManual.value = '0'; penProfession.value = 'none';
-    penWeakness.value = '1.0'; penTarot.value = 'none'; penSkillMult.value = '100';
-    penLifeType.value = 'hpPercent'; penLifeValue.value = '0'; penLifeTargetHp.value = '10000'; penLifeAtk.value = '3000';
-    penBonusNewborn.value = '0'; penBonusArmor.value = '0'; penBonusPersonality.value = '0'; penBonusReaction.value = '0';
-    penDmgBonus.value = '0'; penDreamTalk.value = '0'; penLukarAura.value = '0'; penIsilindAura.value = '0';
-    penPrism.value = '0'; penHeavyAssault.value = '0'; penMaishaAura.value = '0'; penTriggerCoop.value = '0';
-    penXiaoSuPersonality.value = '0'; penGloryGuide.value = '0'; penAnnaAura.value = '0';
-    penWoundLayers.value = '0'; penEmperorCold.value = '0'; penPuppet.value = '0'; penNightmare.value = '0';
-    penPenVuln.value = '0'; penImmunity.value = '0'; penVulnManual.value = '0';
-    // 低地选项
-    const lowlandEl = document.getElementById('penLowland');
-    if (lowlandEl) lowlandEl.value = '0';
-    
-    displayConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
-    actualConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
-    displayAttackConversion = 0; actualAttackConversion = 0;
-    if (statDisplayConversionSpan) statDisplayConversionSpan.textContent = '0';
-    if (statActualConversionSpan) statActualConversionSpan.textContent = '0';
-
-    // 清空所有自定义条目数组并重新渲染
+    if (attackMode === 'single') {
+        penAtkBaseSingle.value = '3000';
+    } else {
+        penAtkPhys.value = '3000';
+        penAtkMagic.value = '3000';
+    }
+    penAtkBuff.value = '0';
+    penFlag.value = '0';
+    penSwordScepter.value = '0';
+    penBasicAura.value = '0';
+    penCoordAttack.value = '0';
+    penHighland.value = '0';
+    penLowland.value = '0';
+    penHangmanMark.value = '0';
+    penWeaknessInsight.value = '0';
+    penProfession.value = 'none';
+    penWeakness.value = '1.0';
+    penTarot.value = 'none';
+    penSkillMult.value = '100';
+    penLifeType.value = 'hpPercent';
+    penLifeValue.value = '0';
+    penLifeTargetHp.value = '10000';
+    penLifeAtk.value = '3000';
+    penDreamTalk.value = '0';
+    penLukarAura.value = '0';
+    penIsilindAura.value = '0';
+    penPrism.value = '0';
+    penHeavyAssault.value = '0';
+    penMaishaAura.value = '0';
+    penTriggerCoop.value = '0';
+    penXiaoSuPersonality.value = '0';
+    penGloryGuide.value = '0';
+    penAnnaAura.value = '0';
+    penWoundLayers.value = '0';
+    penEmperorCold.value = '0';
+    penPuppet.value = '0';
+    penNightmare.value = '0';
+    penPenVuln.value = '0';
+    penImmunity.value = '0';
+    singleDisplayConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+    singleActualConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+    singleDisplayConversion = 0;
+    singleActualConversion = 0;
+    physConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+    magicConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
+    physConversion = 0;
+    magicConversion = 0;
     customDisplayAtkEntries = [];
-    if (typeof renderCustomDisplayAtkEntries === 'function') renderCustomDisplayAtkEntries();
+    renderCustomDisplayAtkEntries();
     customActualAtkEntries = [];
-    if (typeof renderCustomActualAtkEntries === 'function') renderCustomActualAtkEntries();
+    renderCustomActualAtkEntries();
     customLifeBonusEntries = [];
-    if (typeof renderCustomLifeBonusEntries === 'function') renderCustomLifeBonusEntries();
+    renderCustomLifeBonusEntries();
     customPenDmgEntries = [];
-    if (typeof renderCustomPenDmgEntries === 'function') renderCustomPenDmgEntries();
+    renderCustomPenDmgEntries();
     customPenVulnEntries = [];
-    if (typeof renderCustomPenVulnEntries === 'function') renderCustomPenVulnEntries();
+    renderCustomPenVulnEntries();
     customFinalDmgEntries = [];
-    if (typeof renderCustomFinalDmgEntries === 'function') renderCustomFinalDmgEntries();
-
-    toggleLifeRows(); 
+    renderCustomFinalDmgEntries();
+    toggleLifeRows();
     updatePenetration();
 }
-
-const penInputs = ['penAtkBase','penAtkBuff','penFlag','penSwordScepter','penBasicAura','penCoordAttack','penAtkPersonality','penAtkSkill','penAtkWeapon','penAtkArmor','penAtkPercent','penHighland','penHangmanMark','penWeaknessInsight','penAtkManual','penProfession','penWeakness','penTarot','penLifeType','penLifeValue','penLifeAtk','penLifeTargetHp','penSkillMult','penDmgBonus','penBonusNewborn','penBonusArmor','penBonusPersonality','penBonusReaction','penWound','penEmperorCold','penPuppet','penNightmare','penPenVuln','penImmunity','penVulnManual','penDreamTalk','penLukarAura','penIsilindAura','penPrism','penHeavyAssault','penMaishaAura','penTriggerCoop','penXiaoSuPersonality','penGloryGuide','penAnnaAura'];
-penInputs.forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', updatePenetration); });
+const allInputs = document.querySelectorAll('input, select');
+allInputs.forEach(el => el.addEventListener('input', () => {
+    updatePenetration();
+}));
 penLifeType.addEventListener('change', () => { toggleLifeRows(); updatePenetration(); });
 document.getElementById('resetToDefault').addEventListener('click', resetAll);
-toggleLifeRows(); updatePenetration();
+toggleLifeRows();
+updatePenetration();
 
-// 绑定添加自定义条目按钮
-document.addEventListener('DOMContentLoaded', function() {
-    const addBtn = document.getElementById('addCustomFinalDmgBtn');
-    if (addBtn) {
-        addBtn.addEventListener('click', addCustomFinalDmgEntry);
-        console.log('自定义条目按钮绑定成功');
-    } else {
-        console.error('未找到 #addCustomFinalDmgBtn');
-    }
+document.getElementById('attackModeSelect').addEventListener('change', (e) => {
+    attackMode = e.target.value;
+    updateAttackUI();
+    updatePenetration();
 });
 
-document.getElementById('openConversionBtnDisplay').addEventListener('click', () => displayConvManager.openModal('显示攻击转化'));
-document.getElementById('openConversionBtnActual').addEventListener('click', () => actualConvManager.openModal('实际攻击转化'));
+document.getElementById('openConversionBtnDisplaySingle').addEventListener('click', openSingleDisplayModal);
+document.getElementById('openConversionBtnActualSingle').addEventListener('click', openSingleActualModal);
+document.getElementById('openPhysConv').addEventListener('click', openPhysModal);
+document.getElementById('openMagicConv').addEventListener('click', openMagicModal);
+document.getElementById('closeConversionModal').addEventListener('click', closeConversionModal);
+document.getElementById('applyConversionBtn').addEventListener('click', applyConversion);
+document.getElementById('resetConversionBtn').addEventListener('click', resetConversion);
+['convBaseValue', 'convMultiplier', 'convBonus', 'convHiddenBonus'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+        const base = parseFloat(document.getElementById('convBaseValue').value) || 0;
+        const mult = parseFloat(document.getElementById('convMultiplier').value) || 0;
+        const bonus = parseFloat(document.getElementById('convBonus').value) || 0;
+        const hidden = parseFloat(document.getElementById('convHiddenBonus').value) || 0;
+        const result = computeConversionValue(base, mult, bonus, hidden);
+        document.getElementById('convResultValue').innerText = Math.round(result);
+    });
+});
 
-// 绑定添加自定义条目按钮
-const addCustomBtn = document.getElementById('addCustomFinalDmgBtn');
-if (addCustomBtn) {
-    addCustomBtn.addEventListener('click', addCustomFinalDmgEntry);
-} else {
-    console.error('未找到按钮 #addCustomFinalDmgBtn');
-}
+document.addEventListener('DOMContentLoaded', () => {
+    const addDisplayBtn = document.getElementById('addCustomDisplayAtkBtn');
+    if (addDisplayBtn) addDisplayBtn.addEventListener('click', addCustomDisplayAtkEntry);
+    const addActualBtn = document.getElementById('addCustomActualAtkBtn');
+    if (addActualBtn) addActualBtn.addEventListener('click', addCustomActualAtkEntry);
+    const addLifeBtn = document.getElementById('addCustomLifeBonusBtn');
+    if (addLifeBtn) addLifeBtn.addEventListener('click', addCustomLifeBonusEntry);
+    const addPenDmgBtn = document.getElementById('addCustomPenDmgBtn');
+    if (addPenDmgBtn) addPenDmgBtn.addEventListener('click', addCustomPenDmgEntry);
+    const addPenVulnBtn = document.getElementById('addCustomPenVulnBtn');
+    if (addPenVulnBtn) addPenVulnBtn.addEventListener('click', addCustomPenVulnEntry);
+    const addFinalBtn = document.getElementById('addCustomFinalDmgBtn');
+    if (addFinalBtn) addFinalBtn.addEventListener('click', addCustomFinalDmgEntry);
+});
 
-// ========== 记录管理模块 ==========
+// ================= 记录管理模块 =================
 (function() {
     let penRecords = [];
-    const PEN_STORAGE_KEY = 'PenetrationRecords_V1_2_0';
-
+    const PEN_STORAGE_KEY = 'PenetrationRecords_V2_0';
     function loadPenRecords() {
-        let raw = localStorage.getItem(PEN_STORAGE_KEY);
+        const raw = localStorage.getItem(PEN_STORAGE_KEY);
         if (raw) {
             try { penRecords = JSON.parse(raw); if (!Array.isArray(penRecords)) penRecords = []; } catch(e) { penRecords = []; }
         } else { penRecords = []; }
@@ -597,41 +767,28 @@ if (addCustomBtn) {
     loadPenRecords();
 
     const fieldMeta = {
-        penAtkBase: { name: "基础攻击力", zone: "⚔️ 攻击区间", unit: "", alwaysShow: true },
+        // 单攻模式字段（仅用于保存，但双攻模式也会保存对应的值）
+        penAtkBaseSingle: { name: "基础攻击力(单)", zone: "⚔️ 攻击区间", unit: "", alwaysShow: true },
+        penAtkPhys: { name: "基础物攻", zone: "⚔️ 攻击区间", unit: "" },
+        penAtkMagic: { name: "基础魔攻", zone: "⚔️ 攻击区间", unit: "" },
+        // 共享加成字段
         penAtkBuff: { name: "攻击BUFF", zone: "⚔️ 攻击区间", unit: "%" },
         penFlag: { name: "战旗", zone: "⚔️ 攻击区间", unit: "%" },
         penSwordScepter: { name: "剑杖刻印", zone: "⚔️ 攻击区间", unit: "%" },
         penBasicAura: { name: "基础光环", zone: "⚔️ 攻击区间", unit: "%" },
         penCoordAttack: { name: "协攻", zone: "⚔️ 攻击区间", unit: "%" },
-        penAtkPersonality: { name: "个性攻击加成", zone: "⚔️ 攻击区间", unit: "%" },
-        penAtkSkill: { name: "技能攻击加成", zone: "⚔️ 攻击区间", unit: "%" },
-        penAtkWeapon: { name: "武器攻击加成", zone: "⚔️ 攻击区间", unit: "%" },
-        penAtkArmor: { name: "防具攻击加成", zone: "⚔️ 攻击区间", unit: "%" },
-        penAtkPercent: { name: "其他攻击加成", zone: "⚔️ 攻击区间", unit: "%" },
         penHighland: { name: "高地", zone: "⚔️ 攻击区间 (实际加算)", unit: "%" },
+        penLowland: { name: "低地", zone: "⚔️ 攻击区间 (实际加算)", unit: "%" },
         penHangmanMark: { name: "倒吊人指挥官", zone: "⚔️ 攻击区间 (实际加算)", unit: "%" },
         penWeaknessInsight: { name: "窥破弱点", zone: "⚔️ 攻击区间 (实际加算)", unit: "%" },
-        penAtkManual: { name: "手动加成%", zone: "⚔️ 攻击区间 (实际加算)", unit: "%" },
-        displayConvBase: { name: "显示攻击转化数值", zone: "⚔️ 显示攻击转化", unit: "" },
-        displayConvMultiplier: { name: "显示攻击转化倍率", zone: "⚔️ 显示攻击转化", unit: "%" },
-        displayConvBonus: { name: "显示攻击转化加成", zone: "⚔️ 显示攻击转化", unit: "%" },
-        displayConvHiddenBonus: { name: "显示攻击转化加成(不显示)", zone: "⚔️ 显示攻击转化", unit: "%" },
-        actualConvBase: { name: "实际攻击转化数值", zone: "⚔️ 实际攻击转化", unit: "" },
-        actualConvMultiplier: { name: "实际攻击转化倍率", zone: "⚔️ 实际攻击转化", unit: "%" },
-        actualConvBonus: { name: "实际攻击转化加成", zone: "⚔️ 实际攻击转化", unit: "%" },
-        actualConvHiddenBonus: { name: "实际攻击转化加成(不显示)", zone: "⚔️ 实际攻击转化", unit: "%" },
-        penProfession: { name: "职业天赋", zone: "🌐 全局设置", unit: "" },
+        penProfession: { name: "职业天赋", zone: "🌐 全局设置" },
         penWeakness: { name: "克制系数", zone: "🌐 全局设置", unit: "x" },
-        penTarot: { name: "塔罗牌", zone: "🌐 全局设置", unit: "" },
+        penTarot: { name: "塔罗牌", zone: "🌐 全局设置" },
         penSkillMult: { name: "技能倍率", zone: "🌐 全局设置", unit: "%" },
-        penLifeType: { name: "百分比类型", zone: "📊 百分比区间", unit: "" },
+        penLifeType: { name: "百分比类型", zone: "📊 百分比区间" },
         penLifeValue: { name: "结算倍率", zone: "📊 百分比区间", unit: "%" },
-        penLifeTargetHp: { name: "目标生命值", zone: "📊 百分比区间", unit: "" },
-        penLifeAtk: { name: "攻击力", zone: "📊 百分比区间", unit: "" },
-        penBonusNewborn: { name: "新生", zone: "📊 百分比区间", unit: "%" },
-        penBonusArmor: { name: "晶爆铠甲", zone: "📊 百分比区间", unit: "%" },
-        penBonusPersonality: { name: "个性百分比加成", zone: "📊 百分比区间", unit: "%" },
-        penBonusReaction: { name: "反应百分比加成", zone: "📊 百分比区间", unit: "%" },
+        penLifeTargetHp: { name: "目标生命值", zone: "📊 百分比区间" },
+        penLifeAtk: { name: "攻击力", zone: "📊 百分比区间" },
         penDreamTalk: { name: "笼中说梦", zone: "✨ 穿透增伤区间", unit: "%" },
         penLukarAura: { name: "露卡马尔大光环", zone: "✨ 穿透增伤区间", unit: "%" },
         penIsilindAura: { name: "伊瑟琳德大招光环", zone: "✨ 穿透增伤区间", unit: "%" },
@@ -642,14 +799,13 @@ if (addCustomBtn) {
         penXiaoSuPersonality: { name: "小索个性", zone: "✨ 穿透增伤区间", unit: "%" },
         penGloryGuide: { name: "光辉的指引", zone: "✨ 穿透增伤区间", unit: "%" },
         penAnnaAura: { name: "安娜大光环", zone: "✨ 穿透增伤区间", unit: "%" },
-        penDmgBonus: { name: "手动穿透增伤%", zone: "✨ 穿透增伤区间", unit: "%" },
-        penWoundLayers: { name: "狼姐伤口", zone: "🎯 穿透易伤区间", unit: "%" },
-        penEmperorCold: { name: "大帝个性寒境", zone: "🎯 穿透易伤区间", unit: "%" },
+        penWoundLayers: { name: "狼姐伤口层数", zone: "🎯 穿透易伤区间", unit: "层" },
+        penEmperorCold: { name: "大帝个性寒境", zone: "✨ 最终增伤区间", unit: "%" },
         penPuppet: { name: "傀儡", zone: "🎯 穿透易伤区间", unit: "%" },
         penNightmare: { name: "梦魇", zone: "🎯 穿透易伤区间", unit: "%" },
         penPenVuln: { name: "穿透易伤", zone: "🎯 穿透易伤区间", unit: "%" },
         penImmunity: { name: "免疫减免", zone: "🎯 穿透易伤区间", unit: "%" },
-        penVulnManual: { name: "手动易伤%", zone: "🎯 穿透易伤区间", unit: "%" }
+        attackMode: { name: "结算模式", zone: "🌐 全局设置" }
     };
 
     function isFieldEmptyValue(key, value) {
@@ -660,7 +816,6 @@ if (addCustomBtn) {
         if (!isNaN(num) && num === 0) return true;
         return false;
     }
-
     function formatFieldValue(key, value) {
         if (value === undefined || value === null) return '—';
         let val = value.toString();
@@ -689,383 +844,394 @@ if (addCustomBtn) {
             return val + '%';
         } else if (key === 'penEmperorCold') {
             return val === '10' ? '有 (+10%)' : '无';
+        } else if (key === 'attackMode') {
+            return val === 'single' ? '单攻结算' : '双攻结算';
         }
         const unit = fieldMeta[key]?.unit || '';
         return val + (unit ? unit : '');
     }
-
     function getRecordDamage(rec) { return rec.damage !== undefined ? rec.damage : '—'; }
-function getCurrentPenConfig() {
-    // 辅助函数：安全获取元素值
-    const getVal = (id) => {
-        const el = document.getElementById(id);
-        return el ? el.value : '';
-    };
-    return {
-        penAtkBase: getVal('penAtkBase'),
-        penAtkBuff: getVal('penAtkBuff'),
-        penFlag: getVal('penFlag'),
-        penSwordScepter: getVal('penSwordScepter'),
-        penBasicAura: getVal('penBasicAura'),
-        penCoordAttack: getVal('penCoordAttack'),
-        penAtkPersonality: getVal('penAtkPersonality'),
-        penAtkSkill: getVal('penAtkSkill'),
-        penAtkWeapon: getVal('penAtkWeapon'),
-        penAtkArmor: getVal('penAtkArmor'),
-        penAtkPercent: getVal('penAtkPercent'),
-        penHighland: getVal('penHighland'),
-        penHangmanMark: getVal('penHangmanMark'),
-        penWeaknessInsight: getVal('penWeaknessInsight'),
-        penAtkManual: getVal('penAtkManual'),
-        penProfession: getVal('penProfession'),
-        penWeakness: getVal('penWeakness'),
-        penTarot: getVal('penTarot'),
-        penSkillMult: getVal('penSkillMult'),
-        penLifeType: getVal('penLifeType'),
-        penLifeValue: getVal('penLifeValue'),
-        penLifeAtk: getVal('penLifeAtk'),
-        penLifeTargetHp: getVal('penLifeTargetHp'),
-        penDmgBonus: getVal('penDmgBonus'),
-        penBonusNewborn: getVal('penBonusNewborn'),
-        penBonusArmor: getVal('penBonusArmor'),
-        penBonusPersonality: getVal('penBonusPersonality'),
-        penBonusReaction: getVal('penBonusReaction'),
-        penWoundLayers: getVal('penWoundLayers'),
-        penEmperorCold: getVal('penEmperorCold'),
-        penPuppet: getVal('penPuppet'),
-        penNightmare: getVal('penNightmare'),
-        penPenVuln: getVal('penPenVuln'),
-        penImmunity: getVal('penImmunity'),
-        penVulnManual: getVal('penVulnManual'),
-        penDreamTalk: getVal('penDreamTalk'),
-        penLukarAura: getVal('penLukarAura'),
-        penIsilindAura: getVal('penIsilindAura'),
-        penPrism: getVal('penPrism'),
-        penHeavyAssault: getVal('penHeavyAssault'),
-        penMaishaAura: getVal('penMaishaAura'),
-        penTriggerCoop: getVal('penTriggerCoop'),
-        penXiaoSuPersonality: getVal('penXiaoSuPersonality'),
-        penGloryGuide: getVal('penGloryGuide'),
-        penAnnaAura: getVal('penAnnaAura'),
-        displayConvBase: displayConvParams.base,
-        displayConvMultiplier: displayConvParams.multiplier,
-        displayConvBonus: displayConvParams.bonus,
-        displayConvHiddenBonus: displayConvParams.hiddenBonus,
-        actualConvBase: actualConvParams.base,
-        actualConvMultiplier: actualConvParams.multiplier,
-        actualConvBonus: actualConvParams.bonus,
-        actualConvHiddenBonus: actualConvParams.hiddenBonus,
-        customFinalDmgEntries: (window.customFinalDmgEntries || []).map(entry => ({ name: entry.name, percent: entry.percent })),
-        customDisplayAtkEntries: customDisplayAtkEntries.map(e => ({ name: e.name, percent: e.percent })),
-        customActualAtkEntries: customActualAtkEntries.map(e => ({ name: e.name, percent: e.percent })),
-        customLifeBonusEntries: customLifeBonusEntries.map(e => ({ name: e.name, percent: e.percent })),
-        customPenDmgEntries: customPenDmgEntries.map(e => ({ name: e.name, percent: e.percent })),
-        customPenVulnEntries: customPenVulnEntries.map(e => ({ name: e.name, percent: e.percent }))
-    };
-}
-
-
-function applyRecordToCalculator(record) {
-    const config = record.config;
-    for (const [key, value] of Object.entries(config)) {
-        if (key.includes('Conv')) continue;
-        const element = document.getElementById(key);
-        if (element && (element.tagName === 'INPUT' || element.tagName === 'SELECT')) element.value = value;
+    function getCurrentPenConfig() {
+        return {
+            attackMode: attackMode,
+            penAtkBaseSingle: penAtkBaseSingle ? penAtkBaseSingle.value : '3000',
+            penAtkPhys: penAtkPhys ? penAtkPhys.value : '3000',
+            penAtkMagic: penAtkMagic ? penAtkMagic.value : '3000',
+            penAtkBuff: penAtkBuff.value,
+            penFlag: penFlag.value,
+            penSwordScepter: penSwordScepter.value,
+            penBasicAura: penBasicAura.value,
+            penCoordAttack: penCoordAttack.value,
+            penHighland: penHighland.value,
+            penLowland: penLowland.value,
+            penHangmanMark: penHangmanMark.value,
+            penWeaknessInsight: penWeaknessInsight.value,
+            penProfession: penProfession.value,
+            penWeakness: penWeakness.value,
+            penTarot: penTarot.value,
+            penSkillMult: penSkillMult.value,
+            penLifeType: penLifeType.value,
+            penLifeValue: penLifeValue.value,
+            penLifeAtk: penLifeAtk.value,
+            penLifeTargetHp: penLifeTargetHp.value,
+            penDreamTalk: penDreamTalk.value,
+            penLukarAura: penLukarAura.value,
+            penIsilindAura: penIsilindAura.value,
+            penPrism: penPrism.value,
+            penHeavyAssault: penHeavyAssault.value,
+            penMaishaAura: penMaishaAura.value,
+            penTriggerCoop: penTriggerCoop.value,
+            penXiaoSuPersonality: penXiaoSuPersonality.value,
+            penGloryGuide: penGloryGuide.value,
+            penAnnaAura: penAnnaAura.value,
+            penWoundLayers: penWoundLayers.value,
+            penEmperorCold: penEmperorCold.value,
+            penPuppet: penPuppet.value,
+            penNightmare: penNightmare.value,
+            penPenVuln: penPenVuln.value,
+            penImmunity: penImmunity.value,
+            singleDisplayConvBase: singleDisplayConvParams.base,
+            singleDisplayConvMultiplier: singleDisplayConvParams.multiplier,
+            singleDisplayConvBonus: singleDisplayConvParams.bonus,
+            singleDisplayConvHiddenBonus: singleDisplayConvParams.hiddenBonus,
+            singleActualConvBase: singleActualConvParams.base,
+            singleActualConvMultiplier: singleActualConvParams.multiplier,
+            singleActualConvBonus: singleActualConvParams.bonus,
+            singleActualConvHiddenBonus: singleActualConvParams.hiddenBonus,
+            physConvBase: physConvParams.base,
+            physConvMultiplier: physConvParams.multiplier,
+            physConvBonus: physConvParams.bonus,
+            physConvHiddenBonus: physConvParams.hiddenBonus,
+            magicConvBase: magicConvParams.base,
+            magicConvMultiplier: magicConvParams.multiplier,
+            magicConvBonus: magicConvParams.bonus,
+            magicConvHiddenBonus: magicConvParams.hiddenBonus,
+            customDisplayAtkEntries: customDisplayAtkEntries.map(e => ({ name: e.name, percent: e.percent })),
+            customActualAtkEntries: customActualAtkEntries.map(e => ({ name: e.name, percent: e.percent })),
+            customLifeBonusEntries: customLifeBonusEntries.map(e => ({ name: e.name, percent: e.percent })),
+            customPenDmgEntries: customPenDmgEntries.map(e => ({ name: e.name, percent: e.percent })),
+            customPenVulnEntries: customPenVulnEntries.map(e => ({ name: e.name, percent: e.percent })),
+            customFinalDmgEntries: customFinalDmgEntries.map(e => ({ name: e.name, percent: e.percent }))
+        };
     }
-    displayConvParams = {
-        base: parseFloat(config.displayConvBase) || 0, multiplier: parseFloat(config.displayConvMultiplier) || 0,
-        bonus: parseFloat(config.displayConvBonus) || 0, hiddenBonus: parseFloat(config.displayConvHiddenBonus) || 0
-    };
-    actualConvParams = {
-        base: parseFloat(config.actualConvBase) || 0, multiplier: parseFloat(config.actualConvMultiplier) || 0,
-        bonus: parseFloat(config.actualConvBonus) || 0, hiddenBonus: parseFloat(config.actualConvHiddenBonus) || 0
-    };
-    displayAttackConversion = computeConversionValue(displayConvParams.base, displayConvParams.multiplier, displayConvParams.bonus, displayConvParams.hiddenBonus);
-    actualAttackConversion = computeConversionValue(actualConvParams.base, actualConvParams.multiplier, actualConvParams.bonus, actualConvParams.hiddenBonus);
-    
-    // 恢复穿透计算器实际拥有的自定义条目
-    if (config.customDisplayAtkEntries) {
-        customDisplayAtkEntries = config.customDisplayAtkEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomDisplayAtkEntries();
-    } else { customDisplayAtkEntries = []; renderCustomDisplayAtkEntries(); }
-    
-    if (config.customActualAtkEntries) {
-        customActualAtkEntries = config.customActualAtkEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomActualAtkEntries();
-    } else { customActualAtkEntries = []; renderCustomActualAtkEntries(); }
-    
-    if (config.customLifeBonusEntries) {
-        customLifeBonusEntries = config.customLifeBonusEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomLifeBonusEntries();
-    } else { customLifeBonusEntries = []; renderCustomLifeBonusEntries(); }
-    
-    if (config.customPenDmgEntries) {
-        customPenDmgEntries = config.customPenDmgEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomPenDmgEntries();
-    } else { customPenDmgEntries = []; renderCustomPenDmgEntries(); }
-    
-    if (config.customPenVulnEntries) {
-        customPenVulnEntries = config.customPenVulnEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomPenVulnEntries();
-    } else { customPenVulnEntries = []; renderCustomPenVulnEntries(); }
-    
-    if (config.customFinalDmgEntries) {
-        customFinalDmgEntries = config.customFinalDmgEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomFinalDmgEntries();
-    } else { customFinalDmgEntries = []; renderCustomFinalDmgEntries(); }
-    
-    // 恢复伤口层数（兼容新旧记录）
-    if (config.penWoundLayers !== undefined) {
-        document.getElementById('penWoundLayers').value = config.penWoundLayers;
-    } else if (config.penWound !== undefined) {
-        const oldValue = parseFloat(config.penWound);
-        let layers = 0;
-        if (oldValue === 12) layers = 1;
-        else if (oldValue === 25) layers = 2;
-        else if (oldValue === 40) layers = 3;
-        else if (oldValue === 57) layers = 4;
-        document.getElementById('penWoundLayers').value = layers;
+    function applyRecordToCalculator(record) {
+        const config = record.config;
+        attackMode = config.attackMode || 'single';
+        document.getElementById('attackModeSelect').value = attackMode;
+        if (attackMode === 'single') {
+            if (config.penAtkBaseSingle !== undefined) penAtkBaseSingle.value = config.penAtkBaseSingle;
+        } else {
+            if (config.penAtkPhys !== undefined) penAtkPhys.value = config.penAtkPhys;
+            if (config.penAtkMagic !== undefined) penAtkMagic.value = config.penAtkMagic;
+        }
+        penAtkBuff.value = config.penAtkBuff || '0';
+        penFlag.value = config.penFlag || '0';
+        penSwordScepter.value = config.penSwordScepter || '0';
+        penBasicAura.value = config.penBasicAura || '0';
+        penCoordAttack.value = config.penCoordAttack || '0';
+        penHighland.value = config.penHighland || '0';
+        penLowland.value = config.penLowland || '0';
+        penHangmanMark.value = config.penHangmanMark || '0';
+        penWeaknessInsight.value = config.penWeaknessInsight || '0';
+        penProfession.value = config.penProfession || 'none';
+        penWeakness.value = config.penWeakness || '1.0';
+        penTarot.value = config.penTarot || 'none';
+        penSkillMult.value = config.penSkillMult || '100';
+        penLifeType.value = config.penLifeType || 'hpPercent';
+        penLifeValue.value = config.penLifeValue || '0';
+        penLifeAtk.value = config.penLifeAtk || '3000';
+        penLifeTargetHp.value = config.penLifeTargetHp || '10000';
+        penDreamTalk.value = config.penDreamTalk || '0';
+        penLukarAura.value = config.penLukarAura || '0';
+        penIsilindAura.value = config.penIsilindAura || '0';
+        penPrism.value = config.penPrism || '0';
+        penHeavyAssault.value = config.penHeavyAssault || '0';
+        penMaishaAura.value = config.penMaishaAura || '0';
+        penTriggerCoop.value = config.penTriggerCoop || '0';
+        penXiaoSuPersonality.value = config.penXiaoSuPersonality || '0';
+        penGloryGuide.value = config.penGloryGuide || '0';
+        penAnnaAura.value = config.penAnnaAura || '0';
+        penWoundLayers.value = config.penWoundLayers || '0';
+        penEmperorCold.value = config.penEmperorCold || '0';
+        penPuppet.value = config.penPuppet || '0';
+        penNightmare.value = config.penNightmare || '0';
+        penPenVuln.value = config.penPenVuln || '0';
+        penImmunity.value = config.penImmunity || '0';
+        singleDisplayConvParams = {
+            base: parseFloat(config.singleDisplayConvBase) || 0,
+            multiplier: parseFloat(config.singleDisplayConvMultiplier) || 0,
+            bonus: parseFloat(config.singleDisplayConvBonus) || 0,
+            hiddenBonus: parseFloat(config.singleDisplayConvHiddenBonus) || 0
+        };
+        singleActualConvParams = {
+            base: parseFloat(config.singleActualConvBase) || 0,
+            multiplier: parseFloat(config.singleActualConvMultiplier) || 0,
+            bonus: parseFloat(config.singleActualConvBonus) || 0,
+            hiddenBonus: parseFloat(config.singleActualConvHiddenBonus) || 0
+        };
+        physConvParams = {
+            base: parseFloat(config.physConvBase) || 0,
+            multiplier: parseFloat(config.physConvMultiplier) || 0,
+            bonus: parseFloat(config.physConvBonus) || 0,
+            hiddenBonus: parseFloat(config.physConvHiddenBonus) || 0
+        };
+        magicConvParams = {
+            base: parseFloat(config.magicConvBase) || 0,
+            multiplier: parseFloat(config.magicConvMultiplier) || 0,
+            bonus: parseFloat(config.magicConvBonus) || 0,
+            hiddenBonus: parseFloat(config.magicConvHiddenBonus) || 0
+        };
+        singleDisplayConversion = computeConversionValue(singleDisplayConvParams.base, singleDisplayConvParams.multiplier, singleDisplayConvParams.bonus, singleDisplayConvParams.hiddenBonus);
+        singleActualConversion = computeConversionValue(singleActualConvParams.base, singleActualConvParams.multiplier, singleActualConvParams.bonus, singleActualConvParams.hiddenBonus);
+        physConversion = computeConversionValue(physConvParams.base, physConvParams.multiplier, physConvParams.bonus, physConvParams.hiddenBonus);
+        magicConversion = computeConversionValue(magicConvParams.base, magicConvParams.multiplier, magicConvParams.bonus, magicConvParams.hiddenBonus);
+        if (config.customDisplayAtkEntries) {
+            customDisplayAtkEntries = config.customDisplayAtkEntries.map(e => ({ name: e.name, percent: e.percent }));
+            renderCustomDisplayAtkEntries();
+        }
+        if (config.customActualAtkEntries) {
+            customActualAtkEntries = config.customActualAtkEntries.map(e => ({ name: e.name, percent: e.percent }));
+            renderCustomActualAtkEntries();
+        }
+        if (config.customLifeBonusEntries) {
+            customLifeBonusEntries = config.customLifeBonusEntries.map(e => ({ name: e.name, percent: e.percent }));
+            renderCustomLifeBonusEntries();
+        }
+        if (config.customPenDmgEntries) {
+            customPenDmgEntries = config.customPenDmgEntries.map(e => ({ name: e.name, percent: e.percent }));
+            renderCustomPenDmgEntries();
+        }
+        if (config.customPenVulnEntries) {
+            customPenVulnEntries = config.customPenVulnEntries.map(e => ({ name: e.name, percent: e.percent }));
+            renderCustomPenVulnEntries();
+        }
+        if (config.customFinalDmgEntries) {
+            customFinalDmgEntries = config.customFinalDmgEntries.map(e => ({ name: e.name, percent: e.percent }));
+            renderCustomFinalDmgEntries();
+        }
+        toggleLifeRows();
+        updateAttackUI();
+        updatePenetration();
     }
-    
-    toggleLifeRows();
-    updatePenetration();
-}
-
     function getGroupedDetails(config) {
-    const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '⚔️ 显示攻击转化', '⚔️ 实际攻击转化', '📊 百分比区间', '✨ 穿透增伤区间', '🎯 穿透易伤区间', '🌐 全局设置'];
-    const groups = {};
-    for (const [key, value] of Object.entries(config)) {
-        if (key === 'dotEntries') continue;
-        const meta = fieldMeta[key];
-        if (!meta) continue;
-        if (isFieldEmptyValue(key, value)) continue;
-        if (!groups[meta.zone]) groups[meta.zone] = [];
-        groups[meta.zone].push(`<div class="config-item"><strong>${meta.name}</strong>：${formatFieldValue(key, value)}</div>`);
-    }
-    
-    function addCustomGroup(entries, zoneKey) {
-        if (entries && entries.length) {
-            if (!groups[zoneKey]) groups[zoneKey] = [];
-            entries.forEach(entry => {
-                groups[zoneKey].push(`<div class="config-item"><strong>${escapeHtml(entry.name)}</strong>：${entry.percent}%</div>`);
-            });
+        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '📊 百分比区间', '✨ 穿透增伤区间', '🎯 穿透易伤区间', '✨ 最终增伤区间', '🌐 全局设置'];
+        const groups = {};
+        for (const [key, value] of Object.entries(config)) {
+            if (key === 'dotEntries') continue;
+            const meta = fieldMeta[key];
+            if (!meta) continue;
+            if (isFieldEmptyValue(key, value)) continue;
+            if (!groups[meta.zone]) groups[meta.zone] = [];
+            groups[meta.zone].push(`<div class="config-item"><strong>${meta.name}</strong>：${formatFieldValue(key, value)}</div>`);
         }
-    }
-    
-    addCustomGroup(config.customDisplayAtkEntries, '⚔️ 攻击区间 (自定义显示)');
-    addCustomGroup(config.customActualAtkEntries, '⚔️ 攻击区间 (自定义实际)');
-    addCustomGroup(config.customLifeBonusEntries, '📊 百分比区间 (自定义)');
-    addCustomGroup(config.customPenDmgEntries, '✨ 穿透增伤区间 (自定义)');
-    addCustomGroup(config.customPenVulnEntries, '🎯 穿透易伤区间 (自定义)');
-    addCustomGroup(config.customFinalDmgEntries, '✨ 最终增伤区间 (自定义)');
-    
-    const allZones = [...zoneOrder, '⚔️ 攻击区间 (自定义显示)', '⚔️ 攻击区间 (自定义实际)', '📊 百分比区间 (自定义)', '✨ 穿透增伤区间 (自定义)', '🎯 穿透易伤区间 (自定义)', '✨ 最终增伤区间 (自定义)'];
-    let html = '';
-    for (const zone of allZones) {
-        if (groups[zone] && groups[zone].length) {
-            html += `<div class="zone-title">${zone}</div><div class="config-grid">${groups[zone].join('')}</div>`;
+        const customZones = [
+            { entries: config.customDisplayAtkEntries, zone: '⚔️ 攻击区间 (自定义显示)' },
+            { entries: config.customActualAtkEntries, zone: '⚔️ 攻击区间 (自定义实际)' },
+            { entries: config.customLifeBonusEntries, zone: '📊 百分比区间 (自定义)' },
+            { entries: config.customPenDmgEntries, zone: '✨ 穿透增伤区间 (自定义)' },
+            { entries: config.customPenVulnEntries, zone: '🎯 穿透易伤区间 (自定义)' },
+            { entries: config.customFinalDmgEntries, zone: '✨ 最终增伤区间 (自定义)' }
+        ];
+        for (const cz of customZones) {
+            if (cz.entries && cz.entries.length) {
+                if (!groups[cz.zone]) groups[cz.zone] = [];
+                cz.entries.forEach(entry => {
+                    groups[cz.zone].push(`<div class="config-item"><strong>${escapeHtml(entry.name)}</strong>：${entry.percent}%</div>`);
+                });
+            }
         }
+        let html = '';
+        for (const zone of zoneOrder) {
+            if (groups[zone] && groups[zone].length) {
+                html += `<div class="zone-title">${zone}</div><div class="config-grid">${groups[zone].join('')}</div>`;
+            }
+        }
+        return html || '<div class="config-item">无有效配置项</div>';
     }
-    return html || '<div class="config-item">无有效配置项</div>';
-}
-
-function renderPenRecordsUI() {
-    const recordsArea = document.getElementById('recordsListArea');
-    if (!recordsArea) return;
-    if (penRecords.length === 0) {
-        recordsArea.innerHTML = '<div style="padding:20px;text-align:center">✨ 暂无记录，请点击“记录结果”保存配置。</div>';
-        document.getElementById('compareArea').innerHTML = '';
-        return;
-    }
-    let html = '';
-    penRecords.forEach(rec => {
-        html += `<div class="record-card" data-id="${rec.id}">
-            <div class="record-header">
-                <div><input type="checkbox" class="compare-check" value="${rec.id}"> <span class="record-name">📌 ${escapeHtml(rec.name)}</span></div>
-                <div class="record-damage">✨ ${rec.damage}</div>
-                <div class="record-actions">
-                    <button class="small-btn view-detail" data-id="${rec.id}">🔍 详情</button>
-                    <button class="small-btn apply-record" data-id="${rec.id}">📥 填入计算器</button>
-                    <button class="small-btn delete-record" data-id="${rec.id}">🗑️ 删除</button>
+    function renderPenRecordsUI() {
+        const recordsArea = document.getElementById('recordsListArea');
+        if (!recordsArea) return;
+        if (penRecords.length === 0) {
+            recordsArea.innerHTML = '<div style="padding:20px;text-align:center">✨ 暂无记录，请点击“记录结果”保存配置。</div>';
+            document.getElementById('compareArea').innerHTML = '';
+            return;
+        }
+        let html = '';
+        penRecords.forEach(rec => {
+            html += `<div class="record-card" data-id="${rec.id}">
+                <div class="record-header">
+                    <div><input type="checkbox" class="compare-check" value="${rec.id}"> <span class="record-name">📌 ${escapeHtml(rec.name)}</span></div>
+                    <div class="record-damage">✨ ${rec.damage}</div>
+                    <div class="record-actions">
+                        <button class="small-btn view-detail" data-id="${rec.id}">🔍 详情</button>
+                        <button class="small-btn apply-record" data-id="${rec.id}">📥 填入计算器</button>
+                        <button class="small-btn delete-record" data-id="${rec.id}">🗑️ 删除</button>
+                    </div>
                 </div>
-            </div>
-            <div class="detail-panel" id="detail-${rec.id}" style="display:none;"></div>
-        </div>`;
-    });
-    recordsArea.innerHTML = html;
-    document.querySelectorAll('.view-detail').forEach(btn => btn.addEventListener('click', (e) => { let id = parseInt(btn.dataset.id); showPenDetail(id); }));
-    document.querySelectorAll('.apply-record').forEach(btn => btn.addEventListener('click', (e) => { let id = parseInt(btn.dataset.id); const rec = penRecords.find(r => r.id == id); if (rec) { applyRecordToCalculator(rec); document.getElementById('recordModal').classList.remove('active'); } }));
-    document.querySelectorAll('.delete-record').forEach(btn => btn.addEventListener('click', (e) => { let id = parseInt(btn.dataset.id); deletePenRecord(id); renderPenRecordsUI(); updatePenCompareSelection(); }));
-    const checks = document.querySelectorAll('.compare-check');
-    checks.forEach(ch => { ch.removeEventListener('change', handlePenCompareChange); ch.addEventListener('change', handlePenCompareChange); });
-    updatePenCompareSelection();
-}
-
-function handlePenCompareChange() { updatePenCompareSelection(); }
-
-function showPenDetail(id) {
-    let rec = penRecords.find(r => r.id == id);
-    if (!rec) return;
-    let panel = document.getElementById(`detail-${id}`);
-    if (!panel) return;
-    if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
-    panel.innerHTML = getGroupedDetails(rec.config) + `<div class="stat-badge" style="margin-top:12px;">✨ 穿透伤害: ${rec.damage}</div>`;
-    panel.style.display = 'block';
-}
-
-let selectedPenForCompare = [];
-function updatePenCompareSelection() {
-    let checks = document.querySelectorAll('.compare-check');
-    selectedPenForCompare = [];
-    checks.forEach(ch => { if (ch.checked) selectedPenForCompare.push(parseInt(ch.value)); });
-    const compareArea = document.getElementById('compareArea');
-    if (selectedPenForCompare.length >= 2) {
-        let selectedRecords = selectedPenForCompare.map(id => penRecords.find(r => r.id == id)).filter(r => r);
-        if (selectedRecords.length) renderMultiCompare(selectedRecords);
-        else compareArea.innerHTML = '';
-    } else {
-        compareArea.innerHTML = selectedPenForCompare.length === 1 ? '<div class="stat-badge">📊 至少选择两条记录进行对比</div>' : '<div class="stat-badge">📊 勾选记录可进行对比（支持多条）</div>';
+                <div class="detail-panel" id="detail-${rec.id}" style="display:none;"></div>
+            </div>`;
+        });
+        recordsArea.innerHTML = html;
+        document.querySelectorAll('.view-detail').forEach(btn => btn.addEventListener('click', (e) => { let id = parseInt(btn.dataset.id); showPenDetail(id); }));
+        document.querySelectorAll('.apply-record').forEach(btn => btn.addEventListener('click', (e) => { let id = parseInt(btn.dataset.id); const rec = penRecords.find(r => r.id == id); if (rec) { applyRecordToCalculator(rec); document.getElementById('recordModal').classList.remove('active'); } }));
+        document.querySelectorAll('.delete-record').forEach(btn => btn.addEventListener('click', (e) => { let id = parseInt(btn.dataset.id); deletePenRecord(id); renderPenRecordsUI(); updatePenCompareSelection(); }));
+        const checks = document.querySelectorAll('.compare-check');
+        checks.forEach(ch => { ch.removeEventListener('change', handlePenCompareChange); ch.addEventListener('change', handlePenCompareChange); });
+        updatePenCompareSelection();
     }
-}
-
-async function renderMultiCompare(recordsList) {
-    if (!recordsList || recordsList.length < 2) return;
-    const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '⚔️ 显示攻击转化', '⚔️ 实际攻击转化', '📊 百分比区间', '✨ 穿透增伤区间', '🎯 穿透易伤区间', '🌐 全局设置'];
-    const zoneMap = {};
-    for (const [key, meta] of Object.entries(fieldMeta)) {
-        if (!zoneMap[meta.zone]) zoneMap[meta.zone] = [];
-        zoneMap[meta.zone].push(key);
+    function handlePenCompareChange() { updatePenCompareSelection(); }
+    function showPenDetail(id) {
+        let rec = penRecords.find(r => r.id == id);
+        if (!rec) return;
+        let panel = document.getElementById(`detail-${id}`);
+        if (!panel) return;
+        if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+        panel.innerHTML = getGroupedDetails(rec.config) + `<div class="stat-badge" style="margin-top:12px;">✨ 穿透伤害: ${rec.damage}</div>`;
+        panel.style.display = 'block';
     }
-    
-    let fieldsToShow = [];
-    for (const zone of zoneOrder) {
-        const fields = zoneMap[zone] || [];
-        for (const field of fields) {
-            const values = recordsList.map(rec => rec.config[field] !== undefined ? rec.config[field] : '');
-            const allEmpty = values.every(v => isFieldEmptyValue(field, v));
-            if (!allEmpty) fieldsToShow.push({ field, zone, values });
+    let selectedPenForCompare = [];
+    function updatePenCompareSelection() {
+        let checks = document.querySelectorAll('.compare-check');
+        selectedPenForCompare = [];
+        checks.forEach(ch => { if (ch.checked) selectedPenForCompare.push(parseInt(ch.value)); });
+        const compareArea = document.getElementById('compareArea');
+        if (selectedPenForCompare.length >= 2) {
+            let selectedRecords = selectedPenForCompare.map(id => penRecords.find(r => r.id == id)).filter(r => r);
+            if (selectedRecords.length) renderMultiCompare(selectedRecords);
+            else compareArea.innerHTML = '';
+        } else {
+            compareArea.innerHTML = selectedPenForCompare.length === 1 ? '<div class="stat-badge">📊 至少选择两条记录进行对比</div>' : '<div class="stat-badge">📊 勾选记录可进行对比（支持多条）</div>';
         }
     }
-    
-    const customTypes = [
-        { key: 'customDisplayAtkEntries', zone: '⚔️ 攻击区间' },
-        { key: 'customActualAtkEntries', zone: '⚔️ 攻击区间' },
-        { key: 'customLifeBonusEntries', zone: '📊 百分比区间' },
-        { key: 'customPenDmgEntries', zone: '✨ 穿透增伤区间' },
-        { key: 'customPenVulnEntries', zone: '🎯 穿透易伤区间' },
-        { key: 'customFinalDmgEntries', zone: '✨ 穿透增伤区间' }
-    ];
-    for (const ct of customTypes) {
-        let allNames = new Set();
-        for (const rec of recordsList) {
-            const entries = rec.config[ct.key] || [];
-            entries.forEach(e => allNames.add(e.name));
+    async function renderMultiCompare(recordsList) {
+        if (!recordsList || recordsList.length < 2) return;
+        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '📊 百分比区间', '✨ 穿透增伤区间', '🎯 穿透易伤区间', '✨ 最终增伤区间', '🌐 全局设置'];
+        const zoneMap = {};
+        for (const [key, meta] of Object.entries(fieldMeta)) {
+            if (!zoneMap[meta.zone]) zoneMap[meta.zone] = [];
+            zoneMap[meta.zone].push(key);
         }
-        const sortedNames = Array.from(allNames).sort();
-        for (const name of sortedNames) {
-            const values = [];
+        let fieldsToShow = [];
+        for (const zone of zoneOrder) {
+            const fields = zoneMap[zone] || [];
+            for (const field of fields) {
+                const values = recordsList.map(rec => rec.config[field] !== undefined ? rec.config[field] : '');
+                const allEmpty = values.every(v => isFieldEmptyValue(field, v));
+                if (!allEmpty) fieldsToShow.push({ field, zone, values });
+            }
+        }
+        const customTypes = [
+            { key: 'customDisplayAtkEntries', zone: '⚔️ 攻击区间', title: '显示攻击自定义' },
+            { key: 'customActualAtkEntries', zone: '⚔️ 攻击区间', title: '实际攻击自定义' },
+            { key: 'customLifeBonusEntries', zone: '📊 百分比区间', title: '生命值结算自定义' },
+            { key: 'customPenDmgEntries', zone: '✨ 穿透增伤区间', title: '穿透增伤自定义' },
+            { key: 'customPenVulnEntries', zone: '🎯 穿透易伤区间', title: '穿透易伤自定义' },
+            { key: 'customFinalDmgEntries', zone: '✨ 最终增伤区间', title: '最终增伤自定义' }
+        ];
+        for (const ct of customTypes) {
+            let allNames = new Set();
             for (const rec of recordsList) {
                 const entries = rec.config[ct.key] || [];
-                const entry = entries.find(e => e.name === name);
-                values.push(entry ? entry.percent : 0);
+                entries.forEach(e => allNames.add(e.name));
             }
-            const allZero = values.every(v => v === 0);
-            if (allZero) continue;
-            fieldsToShow.push({
-                field: `custom_${ct.key}_${name}`,
-                zone: ct.zone,
-                values: values,
-                isCustom: true,
-                customName: name
-            });
+            const sortedNames = Array.from(allNames).sort();
+            for (const name of sortedNames) {
+                const values = [];
+                for (const rec of recordsList) {
+                    const entries = rec.config[ct.key] || [];
+                    const entry = entries.find(e => e.name === name);
+                    values.push(entry ? entry.percent : 0);
+                }
+                const allZero = values.every(v => v === 0);
+                if (allZero) continue;
+                fieldsToShow.push({
+                    field: `custom_${ct.key}_${name}`,
+                    zone: ct.zone,
+                    values: values,
+                    isCustom: true,
+                    customName: name
+                });
+            }
         }
-    }
-    
-    fieldsToShow.sort((a, b) => zoneOrder.indexOf(a.zone) - zoneOrder.indexOf(b.zone));
-    
-    let html = '<div class="compare-table-wrapper"><table class="compare-table"><thead><th class="field-name">字段</th>';
-    for (const rec of recordsList) html += `<th>${escapeHtml(rec.name)}</th>`;
-    html += '</thead><tbody>';
-    let currentZone = '';
-    for (const item of fieldsToShow) {
-        if (item.zone !== currentZone) {
-            if (currentZone) html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">' + item.zone + '</td></tr>';
-            currentZone = item.zone;
-        }
-        let displayName;
-        if (item.isCustom) {
-            displayName = item.customName;
-        } else {
-            const meta = fieldMeta[item.field];
-            if (!meta) continue;
-            displayName = meta.name;
-        }
-        const allSame = item.values.every(v => v === item.values[0]);
-        html += `<tr><td class="field-name">${escapeHtml(displayName)}</td>`;
-        for (let i = 0; i < recordsList.length; i++) {
-            let displayVal;
+        fieldsToShow.sort((a, b) => zoneOrder.indexOf(a.zone) - zoneOrder.indexOf(b.zone));
+        let html = '<div class="compare-table-wrapper"><table class="compare-table"><thead><th class="field-name">字段</th>';
+        for (const rec of recordsList) html += `<th>${escapeHtml(rec.name)}</th>`;
+        html += '</thead><tbody>';
+        let currentZone = '';
+        for (const item of fieldsToShow) {
+            if (item.zone !== currentZone) {
+                if (currentZone) html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">' + item.zone + '</td></tr>';
+                currentZone = item.zone;
+            }
+            let displayName;
             if (item.isCustom) {
-                displayVal = item.values[i] + '%';
+                displayName = item.customName;
             } else {
-                displayVal = formatFieldValue(item.field, item.values[i]);
+                const meta = fieldMeta[item.field];
+                if (!meta) continue;
+                displayName = meta.name;
             }
-            const cls = allSame ? '' : 'diff-highlight';
-            html += `<td class="${cls}">${escapeHtml(displayVal)}</td>`;
+            const allSame = item.values.every(v => v === item.values[0]);
+            html += `<tr><td class="field-name">${escapeHtml(displayName)}</td>`;
+            for (let i = 0; i < recordsList.length; i++) {
+                let displayVal;
+                if (item.isCustom) {
+                    displayVal = item.values[i] + '%';
+                } else {
+                    displayVal = formatFieldValue(item.field, item.values[i]);
+                }
+                const cls = allSame ? '' : 'diff-highlight';
+                html += `<td class="${cls}">${escapeHtml(displayVal)}</td>`;
+            }
+            html += '</tr>';
         }
-        html += '</tr>';
-    }
-    html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">✨ 伤害对比</td></tr>';
-    html += '<tr><td class="field-name">穿透伤害</td>';
-    for (const rec of recordsList) {
-        html += `<td>${escapeHtml(getRecordDamage(rec))}</td>`;
-    }
-    html += '<tr></tbody></table></div>';
-    
-    document.getElementById('compareArea').innerHTML = html;
-    
-    const existingBtn = document.getElementById('screenshotCompareBtn');
-    if (existingBtn) existingBtn.remove();
-    const btnDiv = document.createElement('div');
-    btnDiv.style.textAlign = 'center';
-    btnDiv.style.marginBottom = '12px';
-    const screenshotBtn = document.createElement('button');
-    screenshotBtn.id = 'screenshotCompareBtn';
-    screenshotBtn.className = 'screenshot-btn';
-    screenshotBtn.innerHTML = '📸 截图对比';
-    screenshotBtn.onclick = async () => {
-        const wrapper = document.querySelector('#compareArea .compare-table-wrapper');
-        if (!wrapper) return;
-        try {
-            await loadHtml2Canvas();
-            showLoading('生成截图中...');
-            const clone = wrapper.cloneNode(true);
-            clone.style.position = 'absolute';
-            clone.style.left = '-9999px';
-            clone.style.top = '0';
-            clone.style.width = 'auto';
-            clone.style.maxWidth = 'none';
-            clone.style.overflow = 'visible';
-            document.body.appendChild(clone);
-            await new Promise(r => setTimeout(r, 100));
-            const canvas = await html2canvas(clone, { scale: 2, backgroundColor: '#ffffff' });
-            const link = document.createElement('a');
-            const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
-            link.download = `穿透对比_${timestamp}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-            document.body.removeChild(clone);
-        } catch (err) {
-            showScreenshotError('截图失败：' + (err.message || '未知错误'));
-        } finally {
-            hideLoading();
+        html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">✨ 伤害对比</td></tr>';
+        html += '<tr><td class="field-name">穿透伤害</td>';
+        for (const rec of recordsList) {
+            html += `<td>${escapeHtml(getRecordDamage(rec))}</td>`;
         }
-    };
-    btnDiv.appendChild(screenshotBtn);
-    document.getElementById('compareArea').insertBefore(btnDiv, document.getElementById('compareArea').firstChild);
-}
-
-    function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
-
+        html += '</tr></tbody></table></div>';
+        document.getElementById('compareArea').innerHTML = html;
+        const existingBtn = document.getElementById('screenshotCompareBtn');
+        if (existingBtn) existingBtn.remove();
+        const btnDiv = document.createElement('div');
+        btnDiv.style.textAlign = 'center';
+        btnDiv.style.marginBottom = '12px';
+        const screenshotBtn = document.createElement('button');
+        screenshotBtn.id = 'screenshotCompareBtn';
+        screenshotBtn.className = 'screenshot-btn';
+        screenshotBtn.innerHTML = '📸 截图对比';
+        screenshotBtn.onclick = async () => {
+            const wrapper = document.querySelector('#compareArea .compare-table-wrapper');
+            if (!wrapper) return;
+            try {
+                await loadHtml2Canvas();
+                showLoading('生成截图中...');
+                const clone = wrapper.cloneNode(true);
+                clone.style.position = 'absolute';
+                clone.style.left = '-9999px';
+                clone.style.top = '0';
+                clone.style.width = 'auto';
+                clone.style.maxWidth = 'none';
+                clone.style.overflow = 'visible';
+                document.body.appendChild(clone);
+                await new Promise(r => setTimeout(r, 100));
+                const canvas = await html2canvas(clone, { scale: 2, backgroundColor: '#ffffff' });
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+                link.download = `穿透对比_${timestamp}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                document.body.removeChild(clone);
+            } catch (err) {
+                showScreenshotError('截图失败：' + (err.message || '未知错误'));
+            } finally {
+                hideLoading();
+            }
+        };
+        btnDiv.appendChild(screenshotBtn);
+        document.getElementById('compareArea').insertBefore(btnDiv, document.getElementById('compareArea').firstChild);
+    }
     document.getElementById('penRecordBtn').addEventListener('click', () => {
         let name = prompt('为本次穿透记录命名 (最多20字)', '穿透 ' + new Date().toLocaleTimeString());
         if (!name) return;
@@ -1090,57 +1256,5 @@ async function renderMultiCompare(recordsList) {
     document.getElementById('closeModalBtn').addEventListener('click', () => { document.getElementById('recordModal').classList.remove('active'); });
     document.getElementById('recordModal').addEventListener('click', (e) => { if (e.target === document.getElementById('recordModal')) document.getElementById('recordModal').classList.remove('active'); });
 })();
-
-// 绑定添加自定义条目按钮
-document.addEventListener('DOMContentLoaded', function() {
-    // 最终增伤自定义按钮
-    const addFinalBtn = document.getElementById('addCustomFinalDmgBtn');
-    if (addFinalBtn) {
-        addFinalBtn.addEventListener('click', addCustomFinalDmgEntry);
-        console.log('最终增伤按钮绑定成功');
-    } else {
-        console.error('未找到 #addCustomFinalDmgBtn');
-    }
-    // 显示攻击自定义按钮
-    const addDisplayBtn = document.getElementById('addCustomDisplayAtkBtn');
-    if (addDisplayBtn) {
-        addDisplayBtn.addEventListener('click', addCustomDisplayAtkEntry);
-        console.log('显示攻击按钮绑定成功');
-    } else {
-        console.error('未找到 #addCustomDisplayAtkBtn');
-    }
-    // 实际攻击自定义按钮
-    const addActualBtn = document.getElementById('addCustomActualAtkBtn');
-    if (addActualBtn) {
-        addActualBtn.addEventListener('click', addCustomActualAtkEntry);
-        console.log('实际攻击按钮绑定成功');
-    } else {
-        console.error('未找到 #addCustomActualAtkBtn');
-    }
-    // 生命值结算自定义按钮
-    const addLifeBtn = document.getElementById('addCustomLifeBonusBtn');
-    if (addLifeBtn) {
-        addLifeBtn.addEventListener('click', addCustomLifeBonusEntry);
-        console.log('生命值结算按钮绑定成功');
-    } else {
-        console.error('未找到 #addCustomLifeBonusBtn');
-    }
-    // 穿透增伤自定义按钮
-    const addPenDmgBtn = document.getElementById('addCustomPenDmgBtn');
-    if (addPenDmgBtn) {
-        addPenDmgBtn.addEventListener('click', addCustomPenDmgEntry);
-        console.log('穿透增伤按钮绑定成功');
-    } else {
-        console.error('未找到 #addCustomPenDmgBtn');
-    }
-    // 穿透易伤自定义按钮
-    const addPenVulnBtn = document.getElementById('addCustomPenVulnBtn');
-    if (addPenVulnBtn) {
-        addPenVulnBtn.addEventListener('click', addCustomPenVulnEntry);
-        console.log('穿透易伤按钮绑定成功');
-    } else {
-        console.error('未找到 #addCustomPenVulnBtn');
-    }
-});
 
 preloadScreenshot();

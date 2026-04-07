@@ -6,6 +6,8 @@ let customDisplayAtkEntries = [];
 let customActualAtkEntries = [];
 let customDefReductionEntries = [];
 let customDefIgnoreEntries = [];
+let customDefFixedReductionEntries = [];   // 固定值减防
+let customDefIncreaseEntries = [];         // 防御提升（百分比）
 let customDmgIncEntries = [];
 let customCritEntries = [];
 let customFinalDmgEntries = [];
@@ -163,6 +165,80 @@ function renderCustomDefIgnoreEntries() {
 function addCustomDefIgnoreEntry() {
     customDefIgnoreEntries.push({ name: '新条目', percent: 0 });
     renderCustomDefIgnoreEntries();
+    updateAll();
+}
+
+// 固定值减防条目
+function renderCustomDefFixedReductionEntries() {
+    const container = document.getElementById('customDefFixedReductionContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < customDefFixedReductionEntries.length; i++) {
+        const entry = customDefFixedReductionEntries[i];
+        const div = document.createElement('div');
+        div.className = 'row';
+        div.style.marginBottom = '8px';
+        div.innerHTML = `
+            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
+            <input type="number" class="custom-percent" value="${entry.value}" step="1" placeholder="固定值" style="flex:1;">
+            <button class="small-btn delete-custom" data-index="${i}" style="background:#b3403a; color:white;">删除</button>
+        `;
+        const nameInput = div.querySelector('.custom-name');
+        const valueInput = div.querySelector('.custom-percent');
+        const delBtn = div.querySelector('.delete-custom');
+        nameInput.addEventListener('change', () => { customDefFixedReductionEntries[i].name = nameInput.value; });
+        valueInput.addEventListener('input', () => {
+            customDefFixedReductionEntries[i].value = parseFloat(valueInput.value) || 0;
+            updateAll();
+        });
+        delBtn.addEventListener('click', () => {
+            customDefFixedReductionEntries.splice(i, 1);
+            renderCustomDefFixedReductionEntries();
+            updateAll();
+        });
+        container.appendChild(div);
+    }
+}
+function addCustomDefFixedReductionEntry() {
+    customDefFixedReductionEntries.push({ name: '新条目', value: 0 });
+    renderCustomDefFixedReductionEntries();
+    updateAll();
+}
+
+// 防御提升条目
+function renderCustomDefIncreaseEntries() {
+    const container = document.getElementById('customDefIncreaseContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < customDefIncreaseEntries.length; i++) {
+        const entry = customDefIncreaseEntries[i];
+        const div = document.createElement('div');
+        div.className = 'row';
+        div.style.marginBottom = '8px';
+        div.innerHTML = `
+            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
+            <input type="number" class="custom-percent" value="${entry.percent}" step="1" placeholder="百分比" style="flex:1;">
+            <button class="small-btn delete-custom" data-index="${i}" style="background:#b3403a; color:white;">删除</button>
+        `;
+        const nameInput = div.querySelector('.custom-name');
+        const percentInput = div.querySelector('.custom-percent');
+        const delBtn = div.querySelector('.delete-custom');
+        nameInput.addEventListener('change', () => { customDefIncreaseEntries[i].name = nameInput.value; });
+        percentInput.addEventListener('input', () => {
+            customDefIncreaseEntries[i].percent = parseFloat(percentInput.value) || 0;
+            updateAll();
+        });
+        delBtn.addEventListener('click', () => {
+            customDefIncreaseEntries.splice(i, 1);
+            renderCustomDefIncreaseEntries();
+            updateAll();
+        });
+        container.appendChild(div);
+    }
+}
+function addCustomDefIncreaseEntry() {
+    customDefIncreaseEntries.push({ name: '新条目', percent: 0 });
+    renderCustomDefIncreaseEntries();
     updateAll();
 }
 
@@ -467,12 +543,11 @@ function updateAll() {
     let profBonus = getProfessionBonuses(profession, hasBackAttack);
     normalAtkPercent += profBonus.atkPercentBonus;
 
-    let extraPercent = 0;
-    extraPercent += parseFloat(highlandSelect.value) || 0;
-    extraPercent += parseFloat(lowlandSelect.value) || 0;
-    extraPercent += parseFloat(lionTransformSelect.value) || 0;
-    extraPercent += parseFloat(hangmanMarkSelect.value) || 0;
-    extraPercent += parseFloat(weaknessInsightSelect.value) || 0;
+let extraPercent = 0;
+extraPercent += parseFloat(highlandSelect.value) || 0;
+extraPercent += parseFloat(lowlandSelect.value) || 0;
+extraPercent += parseFloat(hangmanMarkSelect.value) || 0;
+extraPercent += parseFloat(weaknessInsightSelect.value) || 0;
     let customActualSum = customActualAtkEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
     extraPercent += customActualSum;
 
@@ -489,19 +564,34 @@ function updateAll() {
     statDisplayConversion.textContent = Math.round(displayAttackConversion);
     statActualConversion.textContent = Math.round(actualAttackConversion);
 
+    // 防御区间（修改后）
     let defRaw = parseFloat(defInput.value) || 0;
     let defReduction = parseFloat(defReductionSelect.value) || 0;
     let lockOn = parseFloat(lockOnSelect.value) || 0;
     let customReductionSum = customDefReductionEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
     let totalDebuff = Math.min(100, defReduction + lockOn + customReductionSum);
     let debuffFactor = 1 - totalDebuff / 100;
+    
+    let customIncreaseSum = customDefIncreaseEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
+    let increaseFactor = 1 + customIncreaseSum / 100;
+    
+    let fixedReductionTotal = customDefFixedReductionEntries.reduce((sum, e) => sum + (e.value || 0), 0);
+    
     let armorPiercing = parseFloat(armorPiercingSelect.value) || 0;
     let customIgnoreFactor = 1;
     for (let entry of customDefIgnoreEntries) {
         customIgnoreFactor *= (1 - (entry.percent || 0) / 100);
     }
     let ignoreFinalFactor = (1 - profBonus.ignoreProf / 100) * (1 - armorPiercing / 100) * customIgnoreFactor;
-    let defFinal = defRaw * debuffFactor * ignoreFinalFactor;
+    
+    let defAfterDebuff = defRaw * debuffFactor * increaseFactor;
+    let defAfterFixed = Math.max(0, defAfterDebuff - fixedReductionTotal);
+    let defFinal = defAfterFixed * ignoreFinalFactor;
+    
+    statDebuffFactor.textContent = debuffFactor.toFixed(2) + 'x';
+    document.getElementById('statIncreaseFactor').innerText = increaseFactor.toFixed(2) + 'x';
+    statIgnoreFinal.textContent = ignoreFinalFactor.toFixed(2) + 'x';
+    statDefFinal.textContent = defFinal.toFixed(1);
 
     let baseDiff = Math.max(1, finalActualAtk - defFinal);
     let skill = parseFloat(skillInput.value) || 0;
@@ -533,14 +623,15 @@ function updateAll() {
     let customFinalSum = customFinalDmgEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
     let finalMult = 1 + (finalDmgSkill + customFinalSum) / 100;
 
-    let critBuff = parseFloat(critBuffSelect.value) || 0;
-    let weaponCrit = parseFloat(weaponCritSelect.value) || 0;
-    let heshaAura = parseFloat(heshaAuraSelect.value) || 0;
-    let uriaConvert = parseFloat(uriaConvertSelect.value) || 0;
-    let customCritSum = customCritEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
-    let baseCrit = 130;
-    let critTotal = baseCrit + critBuff + weaponCrit + heshaAura + uriaConvert + customCritSum + tarotBonus.critBonus + profBonus.critDmgBonus;
-    let critMult = critTotal / 100;
+let critBuff = parseFloat(critBuffSelect.value) || 0;
+let weaponCrit = parseFloat(weaponCritSelect.value) || 0;
+let heshaAura = parseFloat(heshaAuraSelect.value) || 0;
+let uriaConvert = parseFloat(uriaConvertSelect.value) || 0;
+let customCritSum = customCritEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
+let baseCrit = 130;
+let critTotal = baseCrit + critBuff + weaponCrit + heshaAura + uriaConvert + customCritSum + tarotBonus.critBonus + profBonus.critDmgBonus;
+let extraCritTotal = critTotal - baseCrit;  // 新增这一行
+let critMult = critTotal / 100;
 
     let common = baseDiff * skillMult * incMult * takenMult * finalMult;
     let nonCrit = Math.round(common);
@@ -549,12 +640,7 @@ function updateAll() {
     nonCritSpan.innerHTML = `<small>⚔️</small> ${nonCrit}`;
     critSpan.innerHTML = `<small>💥</small> ${critDamage}`;
     statCritFooter.textContent = critMult.toFixed(2);
-    statDebuffFactor.textContent = debuffFactor.toFixed(2) + 'x';
-    statIgnoreFinal.textContent = ignoreFinalFactor.toFixed(2) + 'x';
-    statDefFinal.textContent = defFinal.toFixed(1);
-    statExtraDmg.textContent = (tarotBonus.dmgBonus + profBonus.dmgBonus) + '%';
     statInc.textContent = incMult.toFixed(2) + 'x';
-    let extraCritTotal = critBuff + weaponCrit + heshaAura + uriaConvert + customCritSum + tarotBonus.critBonus + profBonus.critDmgBonus;
     statExtraCrit.textContent = extraCritTotal + '%';
     statCrit.textContent = (critTotal / 100).toFixed(2) + 'x';
     statTaken.textContent = takenMult.toFixed(2) + 'x';
@@ -570,7 +656,6 @@ function resetAll() {
     coordAttackSelect.value = '0';
     highlandSelect.value = '0';
     lowlandSelect.value = '0';
-    lionTransformSelect.value = '0';
     hangmanMarkSelect.value = '0';
     weaknessInsightSelect.value = '0';
     defInput.value = '1500';
@@ -609,6 +694,10 @@ function resetAll() {
     renderCustomDefReductionEntries();
     customDefIgnoreEntries = [];
     renderCustomDefIgnoreEntries();
+    customDefFixedReductionEntries = [];
+    renderCustomDefFixedReductionEntries();
+    customDefIncreaseEntries = [];
+    renderCustomDefIncreaseEntries();
     customDmgIncEntries = [];
     renderCustomDmgIncEntries();
     customCritEntries = [];
@@ -653,6 +742,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addDefReductionBtn) addDefReductionBtn.addEventListener('click', addCustomDefReductionEntry);
     const addDefIgnoreBtn = document.getElementById('addCustomDefIgnoreBtn');
     if (addDefIgnoreBtn) addDefIgnoreBtn.addEventListener('click', addCustomDefIgnoreEntry);
+    const addDefFixedBtn = document.getElementById('addCustomDefFixedReductionBtn');
+    if (addDefFixedBtn) addDefFixedBtn.addEventListener('click', addCustomDefFixedReductionEntry);
+    const addDefIncreaseBtn = document.getElementById('addCustomDefIncreaseBtn');
+    if (addDefIncreaseBtn) addDefIncreaseBtn.addEventListener('click', addCustomDefIncreaseEntry);
     const addDmgIncBtn = document.getElementById('addCustomDmgIncBtn');
     if (addDmgIncBtn) addDmgIncBtn.addEventListener('click', addCustomDmgIncEntry);
     const addCritBtn = document.getElementById('addCustomCritBtn');
@@ -738,7 +831,6 @@ document.addEventListener('DOMContentLoaded', () => {
             coordAttack: coordAttackSelect.value,
             highland: highlandSelect.value,
             lowland: lowlandSelect ? lowlandSelect.value : '0',
-            lionTransform: lionTransformSelect.value,
             hangmanMark: hangmanMarkSelect.value,
             weaknessInsight: weaknessInsightSelect.value,
             def: defInput.value,
@@ -775,6 +867,8 @@ document.addEventListener('DOMContentLoaded', () => {
             customActualAtkEntries: customActualAtkEntries.map(e => ({ name: e.name, percent: e.percent })),
             customDefReductionEntries: customDefReductionEntries.map(e => ({ name: e.name, percent: e.percent })),
             customDefIgnoreEntries: customDefIgnoreEntries.map(e => ({ name: e.name, percent: e.percent })),
+            customDefFixedReductionEntries: customDefFixedReductionEntries.map(e => ({ name: e.name, value: e.value })),
+            customDefIncreaseEntries: customDefIncreaseEntries.map(e => ({ name: e.name, percent: e.percent })),
             customDmgIncEntries: customDmgIncEntries.map(e => ({ name: e.name, percent: e.percent })),
             customCritEntries: customCritEntries.map(e => ({ name: e.name, percent: e.percent })),
             customFinalDmgEntries: customFinalDmgEntries.map(e => ({ name: e.name, percent: e.percent })),
@@ -822,6 +916,14 @@ document.addEventListener('DOMContentLoaded', () => {
             customDefIgnoreEntries = config.customDefIgnoreEntries.map(e => ({ name: e.name, percent: e.percent }));
             renderCustomDefIgnoreEntries();
         }
+        if (config.customDefFixedReductionEntries) {
+            customDefFixedReductionEntries = config.customDefFixedReductionEntries.map(e => ({ name: e.name, value: e.value }));
+            renderCustomDefFixedReductionEntries();
+        }
+        if (config.customDefIncreaseEntries) {
+            customDefIncreaseEntries = config.customDefIncreaseEntries.map(e => ({ name: e.name, percent: e.percent }));
+            renderCustomDefIncreaseEntries();
+        }
         if (config.customDmgIncEntries) {
             customDmgIncEntries = config.customDmgIncEntries.map(e => ({ name: e.name, percent: e.percent }));
             renderCustomDmgIncEntries();
@@ -864,7 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
         actualConvHiddenBonus: { name: "实际攻击转化加成(不显示)", zone: "⚔️ 实际攻击转化", unit: "%" },
         def: { name: "基础防御力", zone: "🛡️ 防御区间", unit: "" },
         defReduction: { name: "防御降低", zone: "🛡️ 防御区间", unit: "%" },
-        lockOn: { name: "锁定目标", zone: "🛡️ 防御区间", unit: "%" },
+        lockOn: { name: "锁定目标（号角）", zone: "🛡️ 防御区间", unit: "%" },
         armorPiercing: { name: "穿甲", zone: "🛡️ 防御区间", unit: "%" },
         dmgBuff: { name: "伤害BUFF", zone: "💥 增伤区间", unit: "%" },
         flowLight: { name: "流光", zone: "💥 增伤区间", unit: "%" },
@@ -902,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const map = { none: '无', magician: '魔术师 (+40%增伤)', magician_single: '魔术师单体 (+16%增伤)', justice: '正义 (+15%爆伤)', fool: '愚者 (+10%增伤)', tower: '法皇/高塔 (+20%增伤)' };
             return map[val] || val;
         } else if (key === 'profession') {
-            const map = { none: '无', smasher20: '粉碎者(+20%增伤)', smasher30: '粉碎者(+30%增伤)', defender28: '防御者(+28%增伤)', assassin: '突袭者(无视+15%,爆伤+11%)', watcher: '守望者(+20%增伤,攻击+12%)', destroyer30: '毁灭者(+30%增伤)' };
+            const map = { none: '无', smasher15: '粉碎者(+15%增伤)', smasher20: '粉碎者(+20%增伤)', smasher35: '粉碎者(+35%增伤)', defender28: '防御者(+28%增伤)', assassin: '突袭者(无视+15%,爆伤+11%)', watcher: '守望者(+20%增伤,攻击+12%)', destroyer30: '毁灭者(+30%增伤)' };
             return map[val] || val;
         } else if (key === 'weakness') {
             const map = { '1.0': '无克制 (1.0)', '1.3': '三色克制 (1.3)', '0.7': '三色被克 (0.7)', '1.4': '光暗克制 (1.4)', '0.6': '光暗被克 (0.6)' };
@@ -931,6 +1033,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { entries: config.customActualAtkEntries, zone: '⚔️ 攻击区间 (自定义实际)' },
             { entries: config.customDefReductionEntries, zone: '🛡️ 防御区间 (自定义降低)' },
             { entries: config.customDefIgnoreEntries, zone: '🛡️ 防御区间 (自定义无视)' },
+            { entries: config.customDefFixedReductionEntries, zone: '🛡️ 防御区间 (固定值减防)' },
+            { entries: config.customDefIncreaseEntries, zone: '🛡️ 防御区间 (防御提升)' },
             { entries: config.customDmgIncEntries, zone: '💥 增伤区间 (自定义)' },
             { entries: config.customCritEntries, zone: '⚡ 爆伤区间 (自定义)' },
             { entries: config.customFinalDmgEntries, zone: '✨ 最终增伤区间 (自定义)' },
@@ -940,11 +1044,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (cz.entries && cz.entries.length) {
                 if (!groups[cz.zone]) groups[cz.zone] = [];
                 cz.entries.forEach(entry => {
-                    groups[cz.zone].push(`<div class="config-item"><strong>${escapeHtml(entry.name)}</strong>：${entry.percent}%</div>`);
+                    let val = entry.percent !== undefined ? entry.percent + '%' : entry.value;
+                    groups[cz.zone].push(`<div class="config-item"><strong>${escapeHtml(entry.name)}</strong>：${val}</div>`);
                 });
             }
         }
-        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '⚔️ 显示攻击转化', '⚔️ 实际攻击转化', '⚔️ 攻击区间 (自定义显示)', '⚔️ 攻击区间 (自定义实际)', '🛡️ 防御区间', '🛡️ 防御区间 (自定义降低)', '🛡️ 防御区间 (自定义无视)', '💥 增伤区间', '💥 增伤区间 (自定义)', '⚡ 爆伤区间', '⚡ 爆伤区间 (自定义)', '✨ 最终增伤区间', '✨ 最终增伤区间 (自定义)', '🎯 易伤区间', '🎯 易伤区间 (自定义)', '🌐 全局设置'];
+        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '⚔️ 显示攻击转化', '⚔️ 实际攻击转化', '⚔️ 攻击区间 (自定义显示)', '⚔️ 攻击区间 (自定义实际)', '🛡️ 防御区间', '🛡️ 防御区间 (自定义降低)', '🛡️ 防御区间 (自定义无视)', '🛡️ 防御区间 (固定值减防)', '🛡️ 防御区间 (防御提升)', '💥 增伤区间', '💥 增伤区间 (自定义)', '⚡ 爆伤区间', '⚡ 爆伤区间 (自定义)', '✨ 最终增伤区间', '✨ 最终增伤区间 (自定义)', '🎯 易伤区间', '🎯 易伤区间 (自定义)', '🌐 全局设置'];
         let html = '';
         for (const zone of zoneOrder) {
             if (groups[zone] && groups[zone].length) {
@@ -955,129 +1060,150 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function renderMultiCompare(recordsList) {
-        if (!recordsList || recordsList.length < 2) return;
-        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '⚔️ 显示攻击转化', '⚔️ 实际攻击转化', '🛡️ 防御区间', '💥 增伤区间', '⚡ 爆伤区间', '✨ 最终增伤区间', '🎯 易伤区间', '🌐 全局设置'];
-        const zoneMap = {};
-        for (const [key, meta] of Object.entries(fieldMeta)) {
-            if (!zoneMap[meta.zone]) zoneMap[meta.zone] = [];
-            zoneMap[meta.zone].push(key);
+    if (!recordsList || recordsList.length < 2) return;
+    const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '⚔️ 显示攻击转化', '⚔️ 实际攻击转化', '🛡️ 防御区间', '💥 增伤区间', '⚡ 爆伤区间', '✨ 最终增伤区间', '🎯 易伤区间', '🌐 全局设置'];
+    const zoneMap = {};
+    for (const [key, meta] of Object.entries(fieldMeta)) {
+        if (!zoneMap[meta.zone]) zoneMap[meta.zone] = [];
+        zoneMap[meta.zone].push(key);
+    }
+    const fieldsToShow = [];
+    for (const zone of zoneOrder) {
+        const fields = zoneMap[zone] || [];
+        for (const field of fields) {
+            const values = recordsList.map(rec => rec.config[field] !== undefined ? rec.config[field] : '');
+            const allEmpty = values.every(v => isFieldEmptyValue(field, v));
+            if (!allEmpty) fieldsToShow.push({ field, zone, values });
         }
-        const fieldsToShow = [];
-        for (const zone of zoneOrder) {
-            const fields = zoneMap[zone] || [];
-            for (const field of fields) {
-                const values = recordsList.map(rec => rec.config[field] !== undefined ? rec.config[field] : '');
-                const allEmpty = values.every(v => isFieldEmptyValue(field, v));
-                if (!allEmpty) fieldsToShow.push({ field, zone, values });
-            }
+    }
+    
+    // 收集所有自定义条目类型（每个条目单独作为一行）
+    const customTypes = [
+        { key: 'customDisplayAtkEntries', zone: '⚔️ 攻击区间', title: '显示攻击自定义' },
+        { key: 'customActualAtkEntries', zone: '⚔️ 攻击区间', title: '实际攻击自定义' },
+        { key: 'customDefReductionEntries', zone: '🛡️ 防御区间', title: '降低防御自定义' },
+        { key: 'customDefIgnoreEntries', zone: '🛡️ 防御区间', title: '无视防御自定义' },
+        { key: 'customDefFixedReductionEntries', zone: '🛡️ 防御区间', title: '固定值减防' },
+        { key: 'customDefIncreaseEntries', zone: '🛡️ 防御区间', title: '防御提升' },
+        { key: 'customDmgIncEntries', zone: '💥 增伤区间', title: '增伤自定义' },
+        { key: 'customCritEntries', zone: '⚡ 爆伤区间', title: '爆伤自定义' },
+        { key: 'customFinalDmgEntries', zone: '✨ 最终增伤区间', title: '最终增伤自定义' },
+        { key: 'customTakenEntries', zone: '🎯 易伤区间', title: '易伤自定义' }
+    ];
+    for (const ct of customTypes) {
+        let allNames = new Set();
+        for (const rec of recordsList) {
+            const entries = rec.config[ct.key] || [];
+            entries.forEach(e => allNames.add(e.name));
         }
-        let html = '<div class="compare-table-wrapper"><table class="compare-table"><thead><th class="field-name">字段</th>';
-        for (const rec of recordsList) html += `<th>${escapeHtml(rec.name)}</th>`;
-        html += '</thead><tbody>';
-        let currentZone = '';
-        for (const item of fieldsToShow) {
-            if (item.zone !== currentZone) {
-                if (currentZone) html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">' + item.zone + '</td></tr>';
-                currentZone = item.zone;
-            }
-            const meta = fieldMeta[item.field];
-            if (!meta) continue;
-            const allSame = item.values.every(v => v === item.values[0]);
-            html += '<tr><td class="field-name">' + meta.name + '</td>';
-            for (let i = 0; i < recordsList.length; i++) {
-                const val = formatFieldValue(item.field, item.values[i]);
-                const cls = allSame ? '' : 'diff-highlight';
-                html += `<td class="${cls}">${escapeHtml(val)}</td>`;
-            }
-            html += '</tr>';
-        }
-        // 自定义条目区域
-        const customTypes = [
-            { key: 'customDisplayAtkEntries', title: '显示攻击自定义', zoneHeader: '⚔️ 攻击区间 (自定义显示)' },
-            { key: 'customActualAtkEntries', title: '实际攻击自定义', zoneHeader: '⚔️ 攻击区间 (自定义实际)' },
-            { key: 'customDefReductionEntries', title: '防御降低自定义', zoneHeader: '🛡️ 防御区间 (自定义降低)' },
-            { key: 'customDefIgnoreEntries', title: '无视防御自定义', zoneHeader: '🛡️ 防御区间 (自定义无视)' },
-            { key: 'customDmgIncEntries', title: '增伤自定义', zoneHeader: '💥 增伤区间 (自定义)' },
-            { key: 'customCritEntries', title: '爆伤自定义', zoneHeader: '⚡ 爆伤区间 (自定义)' },
-            { key: 'customFinalDmgEntries', title: '最终增伤自定义', zoneHeader: '✨ 最终增伤区间 (自定义)' },
-            { key: 'customTakenEntries', title: '易伤自定义', zoneHeader: '🎯 易伤区间 (自定义)' }
-        ];
-        for (const ct of customTypes) {
-            let allNames = new Set();
+        const sortedNames = Array.from(allNames).sort();
+        for (const name of sortedNames) {
+            const values = [];
             for (const rec of recordsList) {
                 const entries = rec.config[ct.key] || [];
-                entries.forEach(e => allNames.add(e.name));
+                const entry = entries.find(e => e.name === name);
+                values.push(entry ? (entry.percent !== undefined ? entry.percent : entry.value) : 0);
             }
-            const sortedNames = Array.from(allNames).sort();
-            if (sortedNames.length > 0) {
-                html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">' + ct.zoneHeader + '</td>';
-                for (const name of sortedNames) {
-                    const values = [];
-                    for (const rec of recordsList) {
-                        const entries = rec.config[ct.key] || [];
-                        const entry = entries.find(e => e.name === name);
-                        values.push(entry ? entry.percent : 0);
-                    }
-                    const allSame = values.every(v => v === values[0]);
-                    html += '<tr><td class="field-name">' + escapeHtml(name) + '</td>';
-                    for (let i = 0; i < recordsList.length; i++) {
-                        const displayVal = values[i] + '%';
-                        const cls = allSame ? '' : 'diff-highlight';
-                        html += `<td class="${cls}">${escapeHtml(displayVal)}</td>`;
-                    }
-                    html += '</tr>';
-                }
-            }
+            const allZero = values.every(v => v === 0);
+            if (allZero) continue;
+            fieldsToShow.push({
+                field: `custom_${ct.key}_${name}`,
+                zone: ct.zone,
+                values: values,
+                isCustom: true,
+                customName: name,
+                isFixedValue: ct.key === 'customDefFixedReductionEntries'  // 固定值减防显示不加%
+            });
         }
-        html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">📊 伤害对比</td></tr>';
-        html += '<tr><td class="field-name">非暴击 / 暴击</td>';
-        for (const rec of recordsList) {
-            const dmg = getRecordDamage(rec);
-            html += `<td>${escapeHtml(dmg)}</td>`;
-        }
-        html += '</tr></tbody></table></div>';
-        const compareArea = document.getElementById('compareArea');
-        compareArea.innerHTML = html;
-        const existingBtnDiv = compareArea.querySelector('.screenshot-btn-container');
-        if (existingBtnDiv) existingBtnDiv.remove();
-        const btnDiv = document.createElement('div');
-        btnDiv.className = 'screenshot-btn-container';
-        btnDiv.style.textAlign = 'center';
-        btnDiv.style.marginBottom = '12px';
-        const screenshotBtn = document.createElement('button');
-        screenshotBtn.className = 'screenshot-btn';
-        screenshotBtn.innerHTML = '📸 截图对比';
-        screenshotBtn.onclick = async () => {
-            const wrapper = document.querySelector('#compareArea .compare-table-wrapper');
-            if (!wrapper) return;
-            try {
-                await loadHtml2Canvas();
-                const clone = wrapper.cloneNode(true);
-                clone.style.position = 'absolute';
-                clone.style.left = '-9999px';
-                clone.style.top = '0';
-                clone.style.width = 'auto';
-                clone.style.maxWidth = 'none';
-                clone.style.overflow = 'visible';
-                document.body.appendChild(clone);
-                showLoading('正在生成截图...');
-                await new Promise(r => setTimeout(r, 100));
-                const canvas = await html2canvas(clone, { scale: 2, backgroundColor: '#ffffff' });
-                const link = document.createElement('a');
-                const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
-                link.download = `伤害对比_${timestamp}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-                document.body.removeChild(clone);
-            } catch (err) {
-                showScreenshotError('截图失败：' + (err.message || '未知错误'));
-            } finally {
-                hideLoading();
-            }
-        };
-        btnDiv.appendChild(screenshotBtn);
-        compareArea.insertBefore(btnDiv, compareArea.firstChild);
     }
+    
+    fieldsToShow.sort((a, b) => zoneOrder.indexOf(a.zone) - zoneOrder.indexOf(b.zone));
+    
+    let html = '<div class="compare-table-wrapper"><table class="compare-table"><thead><th class="field-name">字段</th>';
+    for (const rec of recordsList) html += `<th>${escapeHtml(rec.name)}</th>`;
+    html += '</thead><tbody>';
+    let currentZone = '';
+    for (const item of fieldsToShow) {
+        if (item.zone !== currentZone) {
+            if (currentZone) html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">' + item.zone + '</td></tr>';
+            currentZone = item.zone;
+        }
+        let displayName;
+        if (item.isCustom) {
+            displayName = item.customName;
+        } else {
+            const meta = fieldMeta[item.field];
+            if (!meta) continue;
+            displayName = meta.name;
+        }
+        const allSame = item.values.every(v => v === item.values[0]);
+        html += `<tr><td class="field-name">${escapeHtml(displayName)}</td>`;
+        for (let i = 0; i < recordsList.length; i++) {
+            let displayVal;
+            if (item.isCustom) {
+                if (item.isFixedValue) {
+                    displayVal = item.values[i] + '';
+                } else {
+                    displayVal = item.values[i] + '%';
+                }
+            } else {
+                displayVal = formatFieldValue(item.field, item.values[i]);
+            }
+            const cls = allSame ? '' : 'diff-highlight';
+            html += `<td class="${cls}">${escapeHtml(displayVal)}</td>`;
+        }
+        html += '</tr>';
+    }
+    // 伤害行
+    html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">📊 伤害对比</td></tr>';
+    html += '<tr><td class="field-name">非暴击 / 暴击</td>';
+    for (const rec of recordsList) {
+        const dmg = getRecordDamage(rec);
+        html += `<td>${escapeHtml(dmg)}</td>`;
+    }
+    html += '</tr></tbody></table></div>';
+    const compareArea = document.getElementById('compareArea');
+    compareArea.innerHTML = html;
+    const existingBtnDiv = compareArea.querySelector('.screenshot-btn-container');
+    if (existingBtnDiv) existingBtnDiv.remove();
+    const btnDiv = document.createElement('div');
+    btnDiv.className = 'screenshot-btn-container';
+    btnDiv.style.textAlign = 'center';
+    btnDiv.style.marginBottom = '12px';
+    const screenshotBtn = document.createElement('button');
+    screenshotBtn.className = 'screenshot-btn';
+    screenshotBtn.innerHTML = '📸 截图对比';
+    screenshotBtn.onclick = async () => {
+        const wrapper = document.querySelector('#compareArea .compare-table-wrapper');
+        if (!wrapper) return;
+        try {
+            await loadHtml2Canvas();
+            const clone = wrapper.cloneNode(true);
+            clone.style.position = 'absolute';
+            clone.style.left = '-9999px';
+            clone.style.top = '0';
+            clone.style.width = 'auto';
+            clone.style.maxWidth = 'none';
+            clone.style.overflow = 'visible';
+            document.body.appendChild(clone);
+            showLoading('正在生成截图...');
+            await new Promise(r => setTimeout(r, 100));
+            const canvas = await html2canvas(clone, { scale: 2, backgroundColor: '#ffffff' });
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+            link.download = `伤害对比_${timestamp}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            document.body.removeChild(clone);
+        } catch (err) {
+            showScreenshotError('截图失败：' + (err.message || '未知错误'));
+        } finally {
+            hideLoading();
+        }
+    };
+    btnDiv.appendChild(screenshotBtn);
+    compareArea.insertBefore(btnDiv, compareArea.firstChild);
+}
     
     async function handleRecord() {
         let name = prompt('为本次记录命名 (最多20字)', '配置 ' + new Date().toLocaleTimeString());
