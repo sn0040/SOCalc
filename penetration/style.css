@@ -1,14 +1,14 @@
 /* 穿透计算器特有样式 */
 .penetration-note {
     font-size: 0.8rem;
-    color: #6c8aa3;
+    color: #2c5a6e;
     margin-top: 5px;
     text-align: center;
 }
 
 /* 统一自定义条目中名称输入框的样式 */
 .custom-name {
-    border: 2px solid #bac8dc;
+    border: 2px solid #b0e1dc;
     border-radius: 30px;
     padding: 10px 12px;
     background: white;
@@ -17,12 +17,13 @@
     transition: border-color 0.2s;
 }
 .custom-name:focus {
-    border-color: #f6ae2d;
+    border-color: #80D1C8;
+    box-shadow: 0 0 0 3px rgba(128, 209, 200, 0.2);
 }
 
 .row .custom-name,
 .row .custom-percent {
-    border: 2px solid #bac8dc !important;
+    border: 2px solid #b0e1dc !important;
     border-radius: 30px !important;
     padding: 10px 12px !important;
     background: white !important;
@@ -31,5 +32,6 @@
 }
 .row .custom-name:focus,
 .row .custom-percent:focus {
-    border-color: #f6ae2d !important;
+    border-color: #80D1C8 !important;
+    box-shadow: 0 0 0 3px rgba(128, 209, 200, 0.2) !important;
 }

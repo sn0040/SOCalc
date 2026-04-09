@@ -30,8 +30,8 @@ function renderCustomDisplayAtkEntries() {
         div.style.marginBottom = '8px';
         div.innerHTML = `
             <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" style="background:#b3403a; color:white;">删除</button>
+            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
+            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
         `;
         const nameInput = div.querySelector('.custom-name');
         const percentInput = div.querySelector('.custom-percent');
@@ -50,7 +50,7 @@ function renderCustomDisplayAtkEntries() {
     }
 }
 function addCustomDisplayAtkEntry() {
-    customDisplayAtkEntries.push({ name: '新条目', percent: 0 });
+    customDisplayAtkEntries.push({ name: '', percent: 0 });
     renderCustomDisplayAtkEntries();
     updateAllDOT();
 }
@@ -66,8 +66,8 @@ function renderCustomActualAtkEntries() {
         div.style.marginBottom = '8px';
         div.innerHTML = `
             <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" style="background:#b3403a; color:white;">删除</button>
+            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
+            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
         `;
         const nameInput = div.querySelector('.custom-name');
         const percentInput = div.querySelector('.custom-percent');
@@ -86,7 +86,7 @@ function renderCustomActualAtkEntries() {
     }
 }
 function addCustomActualAtkEntry() {
-    customActualAtkEntries.push({ name: '新条目', percent: 0 });
+    customActualAtkEntries.push({ name: '', percent: 0 });
     renderCustomActualAtkEntries();
     updateAllDOT();
 }
@@ -102,8 +102,8 @@ function renderCustomDotIncEntries() {
         div.style.marginBottom = '8px';
         div.innerHTML = `
             <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" style="background:#b3403a; color:white;">删除</button>
+            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
+            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
         `;
         const nameInput = div.querySelector('.custom-name');
         const percentInput = div.querySelector('.custom-percent');
@@ -122,7 +122,7 @@ function renderCustomDotIncEntries() {
     }
 }
 function addCustomDotIncEntry() {
-    customDotIncEntries.push({ name: '新条目', percent: 0 });
+    customDotIncEntries.push({ name: '', percent: 0 });
     renderCustomDotIncEntries();
     updateAllDOT();
 }
@@ -138,8 +138,8 @@ function renderCustomPenVulnEntries() {
         div.style.marginBottom = '8px';
         div.innerHTML = `
             <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" style="background:#b3403a; color:white;">删除</button>
+            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
+            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
         `;
         const nameInput = div.querySelector('.custom-name');
         const percentInput = div.querySelector('.custom-percent');
@@ -158,7 +158,7 @@ function renderCustomPenVulnEntries() {
     }
 }
 function addCustomPenVulnEntry() {
-    customPenVulnEntries.push({ name: '新条目', percent: 0 });
+    customPenVulnEntries.push({ name: '', percent: 0 });
     renderCustomPenVulnEntries();
     updateAllDOT();
 }
@@ -174,8 +174,8 @@ function renderCustomPersistentVulnEntries() {
         div.style.marginBottom = '8px';
         div.innerHTML = `
             <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" style="background:#b3403a; color:white;">删除</button>
+            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
+            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
         `;
         const nameInput = div.querySelector('.custom-name');
         const percentInput = div.querySelector('.custom-percent');
@@ -194,7 +194,7 @@ function renderCustomPersistentVulnEntries() {
     }
 }
 function addCustomPersistentVulnEntry() {
-    customPersistentVulnEntries.push({ name: '新条目', percent: 0 });
+    customPersistentVulnEntries.push({ name: '', percent: 0 });
     renderCustomPersistentVulnEntries();
     updateAllDOT();
 }

@@ -6,26 +6,27 @@
     display: block;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #1f4a6e;
+    color: #2c5a6e;
     margin-bottom: 6px;
 }
 .skill-row input {
     width: 100%;
     padding: 10px 12px;
     font-size: 0.95rem;
-    border: 2px solid #bac8dc;
+    border: 2px solid #b0e1dc;
     border-radius: 30px;
     background: white;
     outline: none;
 }
 .skill-row input:focus {
-    border-color: #f6ae2d;
+    border-color: #80D1C8;
+    box-shadow: 0 0 0 3px rgba(128, 209, 200, 0.2);
 }
 
 /* 统一自定义条目中名称和百分比输入框的样式，与其他输入框一致 */
 .custom-name,
 .custom-percent {
-    border: 2px solid #bac8dc;
+    border: 2px solid #b0e1dc;
     border-radius: 30px;
     padding: 10px 12px;
     background: white;
@@ -38,13 +39,14 @@
 }
 .custom-name:focus,
 .custom-percent:focus {
-    border-color: #f6ae2d;
+    border-color: #80D1C8;
+    box-shadow: 0 0 0 3px rgba(128, 209, 200, 0.2);
 }
 
 /* 删除按钮保持原有小按钮样式，不需要改，但可以微调间距 */
 .delete-custom {
-    background: #b3403a;
-    color: white;
+    background: #2c5a6e;
+    color: #F8F5D6;
     border: none;
     border-radius: 30px;
     padding: 6px 12px;
@@ -53,5 +55,5 @@
     font-weight: bold;
 }
 .delete-custom:hover {
-    background: #8c2e28;
+    background: #1a3d4a;
 }

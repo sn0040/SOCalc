@@ -1,6 +1,6 @@
 /* DOT计算器特有样式 */
 .add-entry-btn {
-    background: #f6ae2d;
+    background: #80D1C8;
     border: none;
     border-radius: 40px;
     padding: 8px 16px;
@@ -9,16 +9,17 @@
     margin-top: 8px;
     width: 100%;
     font-size: 1rem;
+    color: #1d2e44;
 }
 .add-entry-btn:hover {
-    background: #e09d1c;
+    background: #6bb8af;
 }
 .dot-entry {
-    background: #f9fbfe;
+    background: #fefcf0;
     border-radius: 24px;
     padding: 12px;
     margin-bottom: 16px;
-    border: 1px solid #cbdae8;
+    border: 1px solid #b0e1dc;
     position: relative;
 }
 .dot-entry-header {
@@ -27,20 +28,20 @@
     align-items: center;
     margin-bottom: 10px;
     font-weight: bold;
-    color: #1f4a6e;
+    color: #2c5a6e;
 }
 .dot-entry-header button {
     background: none;
     border: none;
     font-size: 1.2rem;
     cursor: pointer;
-    color: #b3403a;
+    color: #2c5a6e;
     font-weight: bold;
 }
 .dot-entry .stat-badge {
     margin-top: 8px;
-    background: #eef2f7;
-    border: 1px solid #9bb1cb;
+    background: #fefcf0;
+    border: 1px solid #b0e1dc;
 }
 .rate-controls {
     display: flex;
@@ -72,7 +73,7 @@
 /* 自定义条目输入框样式，与其他输入框一致 */
 .custom-name,
 .custom-percent {
-    border: 2px solid #bac8dc;
+    border: 2px solid #b0e1dc;
     border-radius: 30px;
     padding: 10px 12px;
     background: white;
@@ -85,13 +86,14 @@
 }
 .custom-name:focus,
 .custom-percent:focus {
-    border-color: #f6ae2d;
+    border-color: #80D1C8;
+    box-shadow: 0 0 0 3px rgba(128, 209, 200, 0.2);
 }
 
 /* 删除按钮样式 */
 .delete-custom {
-    background: #b3403a;
-    color: white;
+    background: #2c5a6e;
+    color: #F8F5D6;
     border: none;
     border-radius: 30px;
     padding: 6px 12px;
@@ -100,5 +102,5 @@
     font-weight: bold;
 }
 .delete-custom:hover {
-    background: #8c2e28;
+    background: #1a3d4a;
 }
