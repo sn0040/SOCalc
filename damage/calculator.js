@@ -12,6 +12,8 @@ let customDmgIncEntries = [];
 let customCritEntries = [];
 let customFinalDmgEntries = [];
 let customTakenEntries = [];
+// 新增：最终易伤自定义条目
+let customFinalVulnEntries = [];
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -386,6 +388,43 @@ function addCustomTakenEntry() {
     updateAll();
 }
 
+// ================= 最终易伤自定义条目（新增） =================
+function renderCustomFinalVulnEntries() {
+    const container = document.getElementById('customFinalVulnContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < customFinalVulnEntries.length; i++) {
+        const entry = customFinalVulnEntries[i];
+        const div = document.createElement('div');
+        div.className = 'row';
+        div.style.marginBottom = '8px';
+        div.innerHTML = `
+            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
+            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
+            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
+        `;
+        const nameInput = div.querySelector('.custom-name');
+        const percentInput = div.querySelector('.custom-percent');
+        const delBtn = div.querySelector('.delete-custom');
+        nameInput.addEventListener('change', () => { customFinalVulnEntries[i].name = nameInput.value; });
+        percentInput.addEventListener('input', () => {
+            customFinalVulnEntries[i].percent = parseFloat(percentInput.value) || 0;
+            updateAll();
+        });
+        delBtn.addEventListener('click', () => {
+            customFinalVulnEntries.splice(i, 1);
+            renderCustomFinalVulnEntries();
+            updateAll();
+        });
+        container.appendChild(div);
+    }
+}
+function addCustomFinalVulnEntry() {
+    customFinalVulnEntries.push({ name: '', percent: 0 });
+    renderCustomFinalVulnEntries();
+    updateAll();
+}
+
 // ================= 攻击转化相关（原生实现） =================
 let displayConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
 let actualConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
@@ -504,6 +543,10 @@ const statExtraCrit = document.getElementById('statExtraCrit');
 const statCrit = document.getElementById('statCrit');
 const statTaken = document.getElementById('statTaken');
 const statFinalMult = document.getElementById('statFinalMult');
+// 新增最终易伤相关元素
+const finalVulnSkillSelect = document.getElementById('finalVulnSkill');
+const finalVulnAuraSelect = document.getElementById('finalVulnAura');
+const statFinalVulnMult = document.getElementById('statFinalVulnMult');
 
 function getProfessionBonuses(prof, hasBackAttack) {
     let atkPercentBonus = 0, dmgBonus = 0, ignoreProf = 0, critDmgBonus = 0, critRateBonus = 0;
@@ -543,11 +586,11 @@ function updateAll() {
     let profBonus = getProfessionBonuses(profession, hasBackAttack);
     normalAtkPercent += profBonus.atkPercentBonus;
 
-let extraPercent = 0;
-extraPercent += parseFloat(highlandSelect.value) || 0;
-extraPercent += parseFloat(lowlandSelect.value) || 0;
-extraPercent += parseFloat(hangmanMarkSelect.value) || 0;
-extraPercent += parseFloat(weaknessInsightSelect.value) || 0;
+    let extraPercent = 0;
+    extraPercent += parseFloat(highlandSelect.value) || 0;
+    extraPercent += parseFloat(lowlandSelect.value) || 0;
+    extraPercent += parseFloat(hangmanMarkSelect.value) || 0;
+    extraPercent += parseFloat(weaknessInsightSelect.value) || 0;
     let customActualSum = customActualAtkEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
     extraPercent += customActualSum;
 
@@ -564,7 +607,7 @@ extraPercent += parseFloat(weaknessInsightSelect.value) || 0;
     statDisplayConversion.textContent = Math.round(displayAttackConversion);
     statActualConversion.textContent = Math.round(actualAttackConversion);
 
-    // 防御区间（修改后）
+    // 防御区间
     let defRaw = parseFloat(defInput.value) || 0;
     let defReduction = parseFloat(defReductionSelect.value) || 0;
     let lockOn = parseFloat(lockOnSelect.value) || 0;
@@ -619,21 +662,31 @@ extraPercent += parseFloat(weaknessInsightSelect.value) || 0;
     let takenMult = (1 + takenBuff/100) * (1 + injuryLevel/100) * (1 + judgment/100) * (1 + soul/100) * (1 + horn/100) * (1 + samanthaJudgment/100) * customTakenMult;
     takenMult = Math.min(takenMult, 3.0);
 
+    // 最终增伤（加算）
     let finalDmgSkill = parseFloat(finalDmgSkillSelect.value) || 0;
     let customFinalSum = customFinalDmgEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
     let finalMult = 1 + (finalDmgSkill + customFinalSum) / 100;
 
-let critBuff = parseFloat(critBuffSelect.value) || 0;
-let weaponCrit = parseFloat(weaponCritSelect.value) || 0;
-let heshaAura = parseFloat(heshaAuraSelect.value) || 0;
-let uriaConvert = parseFloat(uriaConvertSelect.value) || 0;
-let customCritSum = customCritEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
-let baseCrit = 130;
-let critTotal = baseCrit + critBuff + weaponCrit + heshaAura + uriaConvert + customCritSum + tarotBonus.critBonus + profBonus.critDmgBonus;
-let extraCritTotal = critTotal - baseCrit;  // 新增这一行
-let critMult = critTotal / 100;
+    // 最终易伤（乘算）
+    let finalVulnSkill = parseFloat(finalVulnSkillSelect.value) || 0;
+    let finalVulnAura = parseFloat(finalVulnAuraSelect.value) || 0;
+    let finalVulnMult = (1 + finalVulnSkill/100) * (1 + finalVulnAura/100);
+    for (let entry of customFinalVulnEntries) {
+        finalVulnMult *= (1 + (entry.percent || 0) / 100);
+    }
+    statFinalVulnMult.innerText = finalVulnMult.toFixed(2) + 'x';
 
-    let common = baseDiff * skillMult * incMult * takenMult * finalMult;
+    let critBuff = parseFloat(critBuffSelect.value) || 0;
+    let weaponCrit = parseFloat(weaponCritSelect.value) || 0;
+    let heshaAura = parseFloat(heshaAuraSelect.value) || 0;
+    let uriaConvert = parseFloat(uriaConvertSelect.value) || 0;
+    let customCritSum = customCritEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
+    let baseCrit = 130;
+    let critTotal = baseCrit + critBuff + weaponCrit + heshaAura + uriaConvert + customCritSum + tarotBonus.critBonus + profBonus.critDmgBonus;
+    let extraCritTotal = critTotal - baseCrit;
+    let critMult = critTotal / 100;
+
+    let common = baseDiff * skillMult * incMult * takenMult * finalMult * finalVulnMult;
     let nonCrit = Math.round(common);
     let critDamage = Math.round(common * critMult);
 
@@ -706,6 +759,12 @@ function resetAll() {
     renderCustomFinalDmgEntries();
     customTakenEntries = [];
     renderCustomTakenEntries();
+    // 新增最终易伤
+    customFinalVulnEntries = [];
+    renderCustomFinalVulnEntries();
+    // 重置最终易伤下拉框
+    if (finalVulnSkillSelect) finalVulnSkillSelect.value = '0';
+    if (finalVulnAuraSelect) finalVulnAuraSelect.value = '0';
     updateAll();
 }
 
@@ -754,6 +813,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addFinalBtn) addFinalBtn.addEventListener('click', addCustomFinalDmgEntry);
     const addTakenBtn = document.getElementById('addCustomTakenBtn');
     if (addTakenBtn) addTakenBtn.addEventListener('click', addCustomTakenEntry);
+    // 新增最终易伤按钮
+    const addFinalVulnBtn = document.getElementById('addCustomFinalVulnBtn');
+    if (addFinalVulnBtn) addFinalVulnBtn.addEventListener('click', addCustomFinalVulnEntry);
 });
 
 // ================= 记录管理模块 =================
@@ -855,6 +917,8 @@ document.addEventListener('DOMContentLoaded', () => {
             weakness: weaknessSelect.value,
             tarotSelect: tarotSelect.value,
             profession: professionSelect.value,
+            finalVulnSkill: finalVulnSkillSelect ? finalVulnSkillSelect.value : '0',
+            finalVulnAura: finalVulnAuraSelect ? finalVulnAuraSelect.value : '0',
             displayConvBase: displayConvParams.base,
             displayConvMultiplier: displayConvParams.multiplier,
             displayConvBonus: displayConvParams.bonus,
@@ -872,7 +936,8 @@ document.addEventListener('DOMContentLoaded', () => {
             customDmgIncEntries: customDmgIncEntries.map(e => ({ name: e.name, percent: e.percent })),
             customCritEntries: customCritEntries.map(e => ({ name: e.name, percent: e.percent })),
             customFinalDmgEntries: customFinalDmgEntries.map(e => ({ name: e.name, percent: e.percent })),
-            customTakenEntries: customTakenEntries.map(e => ({ name: e.name, percent: e.percent }))
+            customTakenEntries: customTakenEntries.map(e => ({ name: e.name, percent: e.percent })),
+            customFinalVulnEntries: customFinalVulnEntries.map(e => ({ name: e.name, percent: e.percent }))
         };
     }
     
@@ -900,6 +965,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         displayAttackConversion = computeConversionValue(displayConvParams.base, displayConvParams.multiplier, displayConvParams.bonus, displayConvParams.hiddenBonus);
         actualAttackConversion = computeConversionValue(actualConvParams.base, actualConvParams.multiplier, actualConvParams.bonus, actualConvParams.hiddenBonus);
+        
         if (config.customDisplayAtkEntries) {
             customDisplayAtkEntries = config.customDisplayAtkEntries.map(e => ({ name: e.name, percent: e.percent }));
             renderCustomDisplayAtkEntries();
@@ -940,10 +1006,17 @@ document.addEventListener('DOMContentLoaded', () => {
             customTakenEntries = config.customTakenEntries.map(e => ({ name: e.name, percent: e.percent }));
             renderCustomTakenEntries();
         }
+        if (config.customFinalVulnEntries) {
+            customFinalVulnEntries = config.customFinalVulnEntries.map(e => ({ name: e.name, percent: e.percent }));
+            renderCustomFinalVulnEntries();
+        }
+        // 恢复最终易伤下拉框
+        if (config.finalVulnSkill !== undefined && finalVulnSkillSelect) finalVulnSkillSelect.value = config.finalVulnSkill;
+        if (config.finalVulnAura !== undefined && finalVulnAuraSelect) finalVulnAuraSelect.value = config.finalVulnAura;
         updateAll();
     }
     
-    // 字段元数据（常规字段，自定义条目单独处理）
+    // 字段元数据（新增最终易伤相关）
     const fieldMeta = {
         atkBase: { name: "基础攻击力", zone: "⚔️ 攻击区间", unit: "", alwaysShow: true },
         atkBuff: { name: "攻击BUFF", zone: "⚔️ 攻击区间", unit: "%" },
@@ -976,6 +1049,8 @@ document.addEventListener('DOMContentLoaded', () => {
         heshaAura: { name: "赫沙光环", zone: "⚡ 爆伤区间", unit: "%" },
         uriaConvert: { name: "乌利亚转化", zone: "⚡ 爆伤区间", unit: "%" },
         finalDmgSkill: { name: "最终增伤技能", zone: "✨ 最终增伤区间", unit: "%" },
+        finalVulnSkill: { name: "阿尔德法印", zone: "🎯 最终易伤区间", unit: "%" },
+        finalVulnAura: { name: "塞娜光环", zone: "🎯 最终易伤区间", unit: "%" },
         takenBuff: { name: "易伤BUFF", zone: "🎯 易伤区间", unit: "%" },
         injuryLevel: { name: "受伤程度", zone: "🎯 易伤区间", unit: "%" },
         judgment: { name: "审判", zone: "🎯 易伤区间", unit: "%" },
@@ -1038,7 +1113,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { entries: config.customDmgIncEntries, zone: '💥 增伤区间 (自定义)' },
             { entries: config.customCritEntries, zone: '⚡ 爆伤区间 (自定义)' },
             { entries: config.customFinalDmgEntries, zone: '✨ 最终增伤区间 (自定义)' },
-            { entries: config.customTakenEntries, zone: '🎯 易伤区间 (自定义)' }
+            { entries: config.customTakenEntries, zone: '🎯 易伤区间 (自定义)' },
+            { entries: config.customFinalVulnEntries, zone: '🎯 最终易伤区间 (自定义)' }
         ];
         for (const cz of customZones) {
             if (cz.entries && cz.entries.length) {
@@ -1049,7 +1125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
-        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '⚔️ 显示攻击转化', '⚔️ 实际攻击转化', '⚔️ 攻击区间 (自定义显示)', '⚔️ 攻击区间 (自定义实际)', '🛡️ 防御区间', '🛡️ 防御区间 (自定义降低)', '🛡️ 防御区间 (自定义无视)', '🛡️ 防御区间 (固定值减防)', '🛡️ 防御区间 (防御提升)', '💥 增伤区间', '💥 增伤区间 (自定义)', '⚡ 爆伤区间', '⚡ 爆伤区间 (自定义)', '✨ 最终增伤区间', '✨ 最终增伤区间 (自定义)', '🎯 易伤区间', '🎯 易伤区间 (自定义)', '🌐 全局设置'];
+        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '⚔️ 显示攻击转化', '⚔️ 实际攻击转化', '⚔️ 攻击区间 (自定义显示)', '⚔️ 攻击区间 (自定义实际)', '🛡️ 防御区间', '🛡️ 防御区间 (自定义降低)', '🛡️ 防御区间 (自定义无视)', '🛡️ 防御区间 (固定值减防)', '🛡️ 防御区间 (防御提升)', '💥 增伤区间', '💥 增伤区间 (自定义)', '⚡ 爆伤区间', '⚡ 爆伤区间 (自定义)', '✨ 最终增伤区间', '✨ 最终增伤区间 (自定义)', '🎯 最终易伤区间', '🎯 最终易伤区间 (自定义)', '🎯 易伤区间', '🎯 易伤区间 (自定义)', '🌐 全局设置'];
         let html = '';
         for (const zone of zoneOrder) {
             if (groups[zone] && groups[zone].length) {
@@ -1060,150 +1136,151 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function renderMultiCompare(recordsList) {
-    if (!recordsList || recordsList.length < 2) return;
-    const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '⚔️ 显示攻击转化', '⚔️ 实际攻击转化', '🛡️ 防御区间', '💥 增伤区间', '⚡ 爆伤区间', '✨ 最终增伤区间', '🎯 易伤区间', '🌐 全局设置'];
-    const zoneMap = {};
-    for (const [key, meta] of Object.entries(fieldMeta)) {
-        if (!zoneMap[meta.zone]) zoneMap[meta.zone] = [];
-        zoneMap[meta.zone].push(key);
-    }
-    const fieldsToShow = [];
-    for (const zone of zoneOrder) {
-        const fields = zoneMap[zone] || [];
-        for (const field of fields) {
-            const values = recordsList.map(rec => rec.config[field] !== undefined ? rec.config[field] : '');
-            const allEmpty = values.every(v => isFieldEmptyValue(field, v));
-            if (!allEmpty) fieldsToShow.push({ field, zone, values });
+        if (!recordsList || recordsList.length < 2) return;
+        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '⚔️ 显示攻击转化', '⚔️ 实际攻击转化', '🛡️ 防御区间', '💥 增伤区间', '⚡ 爆伤区间', '✨ 最终增伤区间', '🎯 最终易伤区间', '🎯 易伤区间', '🌐 全局设置'];
+        const zoneMap = {};
+        for (const [key, meta] of Object.entries(fieldMeta)) {
+            if (!zoneMap[meta.zone]) zoneMap[meta.zone] = [];
+            zoneMap[meta.zone].push(key);
         }
-    }
-    
-    // 收集所有自定义条目类型（每个条目单独作为一行）
-    const customTypes = [
-        { key: 'customDisplayAtkEntries', zone: '⚔️ 攻击区间', title: '显示攻击自定义' },
-        { key: 'customActualAtkEntries', zone: '⚔️ 攻击区间', title: '实际攻击自定义' },
-        { key: 'customDefReductionEntries', zone: '🛡️ 防御区间', title: '降低防御自定义' },
-        { key: 'customDefIgnoreEntries', zone: '🛡️ 防御区间', title: '无视防御自定义' },
-        { key: 'customDefFixedReductionEntries', zone: '🛡️ 防御区间', title: '固定值减防' },
-        { key: 'customDefIncreaseEntries', zone: '🛡️ 防御区间', title: '防御提升' },
-        { key: 'customDmgIncEntries', zone: '💥 增伤区间', title: '增伤自定义' },
-        { key: 'customCritEntries', zone: '⚡ 爆伤区间', title: '爆伤自定义' },
-        { key: 'customFinalDmgEntries', zone: '✨ 最终增伤区间', title: '最终增伤自定义' },
-        { key: 'customTakenEntries', zone: '🎯 易伤区间', title: '易伤自定义' }
-    ];
-    for (const ct of customTypes) {
-        let allNames = new Set();
-        for (const rec of recordsList) {
-            const entries = rec.config[ct.key] || [];
-            entries.forEach(e => allNames.add(e.name));
+        const fieldsToShow = [];
+        for (const zone of zoneOrder) {
+            const fields = zoneMap[zone] || [];
+            for (const field of fields) {
+                const values = recordsList.map(rec => rec.config[field] !== undefined ? rec.config[field] : '');
+                const allEmpty = values.every(v => isFieldEmptyValue(field, v));
+                if (!allEmpty) fieldsToShow.push({ field, zone, values });
+            }
         }
-        const sortedNames = Array.from(allNames).sort();
-        for (const name of sortedNames) {
-            const values = [];
+        
+        // 收集自定义条目
+        const customTypes = [
+            { key: 'customDisplayAtkEntries', zone: '⚔️ 攻击区间', title: '显示攻击自定义' },
+            { key: 'customActualAtkEntries', zone: '⚔️ 攻击区间', title: '实际攻击自定义' },
+            { key: 'customDefReductionEntries', zone: '🛡️ 防御区间', title: '降低防御自定义' },
+            { key: 'customDefIgnoreEntries', zone: '🛡️ 防御区间', title: '无视防御自定义' },
+            { key: 'customDefFixedReductionEntries', zone: '🛡️ 防御区间', title: '固定值减防' },
+            { key: 'customDefIncreaseEntries', zone: '🛡️ 防御区间', title: '防御提升' },
+            { key: 'customDmgIncEntries', zone: '💥 增伤区间', title: '增伤自定义' },
+            { key: 'customCritEntries', zone: '⚡ 爆伤区间', title: '爆伤自定义' },
+            { key: 'customFinalDmgEntries', zone: '✨ 最终增伤区间', title: '最终增伤自定义' },
+            { key: 'customTakenEntries', zone: '🎯 易伤区间', title: '易伤自定义' },
+            { key: 'customFinalVulnEntries', zone: '🎯 最终易伤区间', title: '最终易伤自定义' }
+        ];
+        for (const ct of customTypes) {
+            let allNames = new Set();
             for (const rec of recordsList) {
                 const entries = rec.config[ct.key] || [];
-                const entry = entries.find(e => e.name === name);
-                values.push(entry ? (entry.percent !== undefined ? entry.percent : entry.value) : 0);
+                entries.forEach(e => allNames.add(e.name));
             }
-            const allZero = values.every(v => v === 0);
-            if (allZero) continue;
-            fieldsToShow.push({
-                field: `custom_${ct.key}_${name}`,
-                zone: ct.zone,
-                values: values,
-                isCustom: true,
-                customName: name,
-                isFixedValue: ct.key === 'customDefFixedReductionEntries'  // 固定值减防显示不加%
-            });
-        }
-    }
-    
-    fieldsToShow.sort((a, b) => zoneOrder.indexOf(a.zone) - zoneOrder.indexOf(b.zone));
-    
-    let html = '<div class="compare-table-wrapper"><table class="compare-table"><thead><th class="field-name">字段</th>';
-    for (const rec of recordsList) html += `<th>${escapeHtml(rec.name)}</th>`;
-    html += '</thead><tbody>';
-    let currentZone = '';
-    for (const item of fieldsToShow) {
-        if (item.zone !== currentZone) {
-            if (currentZone) html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">' + item.zone + '</td></tr>';
-            currentZone = item.zone;
-        }
-        let displayName;
-        if (item.isCustom) {
-            displayName = item.customName;
-        } else {
-            const meta = fieldMeta[item.field];
-            if (!meta) continue;
-            displayName = meta.name;
-        }
-        const allSame = item.values.every(v => v === item.values[0]);
-        html += `<tr><td class="field-name">${escapeHtml(displayName)}</td>`;
-        for (let i = 0; i < recordsList.length; i++) {
-            let displayVal;
-            if (item.isCustom) {
-                if (item.isFixedValue) {
-                    displayVal = item.values[i] + '';
-                } else {
-                    displayVal = item.values[i] + '%';
+            const sortedNames = Array.from(allNames).sort();
+            for (const name of sortedNames) {
+                const values = [];
+                for (const rec of recordsList) {
+                    const entries = rec.config[ct.key] || [];
+                    const entry = entries.find(e => e.name === name);
+                    values.push(entry ? (entry.percent !== undefined ? entry.percent : entry.value) : 0);
                 }
-            } else {
-                displayVal = formatFieldValue(item.field, item.values[i]);
+                const allZero = values.every(v => v === 0);
+                if (allZero) continue;
+                fieldsToShow.push({
+                    field: `custom_${ct.key}_${name}`,
+                    zone: ct.zone,
+                    values: values,
+                    isCustom: true,
+                    customName: name,
+                    isFixedValue: ct.key === 'customDefFixedReductionEntries'
+                });
             }
-            const cls = allSame ? '' : 'diff-highlight';
-            html += `<td class="${cls}">${escapeHtml(displayVal)}</td>`;
         }
-        html += '</tr>';
-    }
-    // 伤害行
-    html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">📊 伤害对比</td></tr>';
-    html += '<tr><td class="field-name">非暴击 / 暴击</td>';
-    for (const rec of recordsList) {
-        const dmg = getRecordDamage(rec);
-        html += `<td>${escapeHtml(dmg)}</td>`;
-    }
-    html += '</tr></tbody></table></div>';
-    const compareArea = document.getElementById('compareArea');
-    compareArea.innerHTML = html;
-    const existingBtnDiv = compareArea.querySelector('.screenshot-btn-container');
-    if (existingBtnDiv) existingBtnDiv.remove();
-    const btnDiv = document.createElement('div');
-    btnDiv.className = 'screenshot-btn-container';
-    btnDiv.style.textAlign = 'center';
-    btnDiv.style.marginBottom = '12px';
-    const screenshotBtn = document.createElement('button');
-    screenshotBtn.className = 'screenshot-btn';
-    screenshotBtn.innerHTML = '📸 截图对比';
-    screenshotBtn.onclick = async () => {
-        const wrapper = document.querySelector('#compareArea .compare-table-wrapper');
-        if (!wrapper) return;
-        try {
-            await loadHtml2Canvas();
-            const clone = wrapper.cloneNode(true);
-            clone.style.position = 'absolute';
-            clone.style.left = '-9999px';
-            clone.style.top = '0';
-            clone.style.width = 'auto';
-            clone.style.maxWidth = 'none';
-            clone.style.overflow = 'visible';
-            document.body.appendChild(clone);
-            showLoading('正在生成截图...');
-            await new Promise(r => setTimeout(r, 100));
-            const canvas = await html2canvas(clone, { scale: 2, backgroundColor: '#ffffff' });
-            const link = document.createElement('a');
-            const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
-            link.download = `伤害对比_${timestamp}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-            document.body.removeChild(clone);
-        } catch (err) {
-            showScreenshotError('截图失败：' + (err.message || '未知错误'));
-        } finally {
-            hideLoading();
+        
+        fieldsToShow.sort((a, b) => zoneOrder.indexOf(a.zone) - zoneOrder.indexOf(b.zone));
+        
+        let html = '<div class="compare-table-wrapper"><table class="compare-table"><thead><th class="field-name">字段</th>';
+        for (const rec of recordsList) html += `<th>${escapeHtml(rec.name)}</th>`;
+        html += '</thead><tbody>';
+        let currentZone = '';
+        for (const item of fieldsToShow) {
+            if (item.zone !== currentZone) {
+                if (currentZone) html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">' + item.zone + '</td></tr>';
+                currentZone = item.zone;
+            }
+            let displayName;
+            if (item.isCustom) {
+                displayName = item.customName;
+            } else {
+                const meta = fieldMeta[item.field];
+                if (!meta) continue;
+                displayName = meta.name;
+            }
+            const allSame = item.values.every(v => v === item.values[0]);
+            html += `<tr><td class="field-name">${escapeHtml(displayName)}</td>`;
+            for (let i = 0; i < recordsList.length; i++) {
+                let displayVal;
+                if (item.isCustom) {
+                    if (item.isFixedValue) {
+                        displayVal = item.values[i] + '';
+                    } else {
+                        displayVal = item.values[i] + '%';
+                    }
+                } else {
+                    displayVal = formatFieldValue(item.field, item.values[i]);
+                }
+                const cls = allSame ? '' : 'diff-highlight';
+                html += `<td class="${cls}">${escapeHtml(displayVal)}</td>`;
+            }
+            html += '<tr>';
         }
-    };
-    btnDiv.appendChild(screenshotBtn);
-    compareArea.insertBefore(btnDiv, compareArea.firstChild);
-}
+        // 伤害行
+        html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">📊 伤害对比</tr>';
+        html += '<tr><td class="field-name">非暴击 / 暴击</td>';
+        for (const rec of recordsList) {
+            const dmg = getRecordDamage(rec);
+            html += `<td>${escapeHtml(dmg)}</td>`;
+        }
+        html += '</tr></tbody></table></div>';
+        const compareArea = document.getElementById('compareArea');
+        compareArea.innerHTML = html;
+        const existingBtnDiv = compareArea.querySelector('.screenshot-btn-container');
+        if (existingBtnDiv) existingBtnDiv.remove();
+        const btnDiv = document.createElement('div');
+        btnDiv.className = 'screenshot-btn-container';
+        btnDiv.style.textAlign = 'center';
+        btnDiv.style.marginBottom = '12px';
+        const screenshotBtn = document.createElement('button');
+        screenshotBtn.className = 'screenshot-btn';
+        screenshotBtn.innerHTML = '📸 截图对比';
+        screenshotBtn.onclick = async () => {
+            const wrapper = document.querySelector('#compareArea .compare-table-wrapper');
+            if (!wrapper) return;
+            try {
+                await loadHtml2Canvas();
+                const clone = wrapper.cloneNode(true);
+                clone.style.position = 'absolute';
+                clone.style.left = '-9999px';
+                clone.style.top = '0';
+                clone.style.width = 'auto';
+                clone.style.maxWidth = 'none';
+                clone.style.overflow = 'visible';
+                document.body.appendChild(clone);
+                showLoading('正在生成截图...');
+                await new Promise(r => setTimeout(r, 100));
+                const canvas = await html2canvas(clone, { scale: 2, backgroundColor: '#ffffff' });
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+                link.download = `伤害对比_${timestamp}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                document.body.removeChild(clone);
+            } catch (err) {
+                showScreenshotError('截图失败：' + (err.message || '未知错误'));
+            } finally {
+                hideLoading();
+            }
+        };
+        btnDiv.appendChild(screenshotBtn);
+        compareArea.insertBefore(btnDiv, compareArea.firstChild);
+    }
     
     async function handleRecord() {
         let name = prompt('为本次记录命名 (最多20字)', '配置 ' + new Date().toLocaleTimeString());

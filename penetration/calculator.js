@@ -8,6 +8,7 @@ let customLifeBonusEntries = [];
 let customPenDmgEntries = [];
 let customPenVulnEntries = [];
 let customFinalDmgEntries = [];
+let customFinalVulnEntries = []; // 新增：最终易伤自定义条目
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -237,6 +238,44 @@ function addCustomFinalDmgEntry() {
     updatePenetration();
 }
 
+// ================= 新增：最终易伤自定义条目 =================
+function renderCustomFinalVulnEntries() {
+    const container = document.getElementById('customFinalVulnContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < customFinalVulnEntries.length; i++) {
+        const entry = customFinalVulnEntries[i];
+        const div = document.createElement('div');
+        div.className = 'row';
+        div.style.marginBottom = '8px';
+        div.style.alignItems = 'center';
+        div.innerHTML = `
+            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
+            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
+            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
+        `;
+        const nameInput = div.querySelector('.custom-name');
+        const percentInput = div.querySelector('.custom-percent');
+        const delBtn = div.querySelector('.delete-custom');
+        nameInput.addEventListener('change', () => { customFinalVulnEntries[i].name = nameInput.value; });
+        percentInput.addEventListener('input', () => {
+            customFinalVulnEntries[i].percent = parseFloat(percentInput.value) || 0;
+            updatePenetration();
+        });
+        delBtn.addEventListener('click', () => {
+            customFinalVulnEntries.splice(i, 1);
+            renderCustomFinalVulnEntries();
+            updatePenetration();
+        });
+        container.appendChild(div);
+    }
+}
+function addCustomFinalVulnEntry() {
+    customFinalVulnEntries.push({ name: '', percent: 0 });
+    renderCustomFinalVulnEntries();
+    updatePenetration();
+}
+
 // ================= 攻击转化相关（支持单攻/双攻） =================
 let singleDisplayConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
 let singleActualConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
@@ -247,7 +286,7 @@ let magicConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
 let physConversion = 0;
 let magicConversion = 0;
 
-let attackMode = 'single'; // 'single' 或 'double'
+let attackMode = 'single';
 
 function computeConversionValue(base, mult, bonus, hiddenBonus) {
     const multiplier = mult / 100;
@@ -421,6 +460,9 @@ const penVulnMultSpan = document.getElementById('penVulnMult');
 const penDamageDisplay = document.getElementById('penDamageDisplay');
 const penBonusOptionsDiv = document.getElementById('penBonusOptions');
 const penBonusSectionDiv = document.getElementById('penBonusSection');
+// 新增最终易伤元素
+const finalVulnAuraSelect = document.getElementById('finalVulnAura');
+const finalVulnMultSpan = document.getElementById('finalVulnMult');
 
 function getNum(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
@@ -501,7 +543,6 @@ function updateAttackUI() {
     const doubleActual = document.getElementById('doubleActualArea');
 
     if (attackMode === 'single') {
-        // 隐藏双攻区域，显示单攻区域
         singleArea.style.display = 'block';
         doubleArea.style.display = 'none';
         singleDisplay.style.display = 'block';
@@ -509,7 +550,6 @@ function updateAttackUI() {
         singleActual.style.display = 'block';
         doubleActual.style.display = 'none';
 
-        // 更新单攻数值
         const normalPercent = getNormalPercent();
         const extraPercent = getExtraPercent();
         penNormalPercentSingle.innerText = normalPercent.toFixed(1);
@@ -519,7 +559,6 @@ function updateAttackUI() {
         statActualConversionSingle.innerText = Math.round(singleActualConversion);
         penActualAtkSingle.innerText = Math.round(getSingleActualAtk());
     } else {
-        // 隐藏单攻区域，显示双攻区域
         singleArea.style.display = 'none';
         doubleArea.style.display = 'block';
         singleDisplay.style.display = 'none';
@@ -527,7 +566,6 @@ function updateAttackUI() {
         singleActual.style.display = 'none';
         doubleActual.style.display = 'block';
 
-        // 更新双攻数值
         const normalPercent = getNormalPercent();
         const extraPercent = getExtraPercent();
         penNormalPercentDouble.innerText = normalPercent.toFixed(1);
@@ -627,13 +665,24 @@ function updatePenetration() {
     penDmgMultSpan.textContent = dmgMult.toFixed(2) + 'x';
     let vulnMult = computeVulnMult();
     penVulnMultSpan.textContent = vulnMult.toFixed(2) + 'x';
+
+    // 最终增伤（加算）
     let emperorCold = parseFloat(penEmperorCold.value) || 0;
-    let finalMult = (1 + emperorCold / 100);
+    let finalMult = 1 + emperorCold / 100;
     for (let entry of customFinalDmgEntries) {
-        finalMult *= (1 + (entry.percent || 0) / 100);
+        finalMult += (entry.percent || 0) / 100;
     }
     document.getElementById('finalDmgMult').innerText = finalMult.toFixed(2) + 'x';
-    let finalDamage = (attackPart + finalLifePart) * dmgMult * vulnMult * finalMult;
+
+    // 最终易伤（乘算）
+    let finalVulnAura = parseFloat(finalVulnAuraSelect.value) || 0;
+    let finalVulnMult = (1 + finalVulnAura / 100);
+    for (let entry of customFinalVulnEntries) {
+        finalVulnMult *= (1 + (entry.percent || 0) / 100);
+    }
+    if (finalVulnMultSpan) finalVulnMultSpan.innerText = finalVulnMult.toFixed(2) + 'x';
+
+    let finalDamage = (attackPart + finalLifePart) * dmgMult * vulnMult * finalMult * finalVulnMult;
     finalDamage = Math.round(finalDamage);
     penDamageDisplay.innerHTML = `<small>✨</small> ${finalDamage}`;
     updateAttackUI();
@@ -678,6 +727,7 @@ function resetAll() {
     penNightmare.value = '0';
     penPenVuln.value = '0';
     penImmunity.value = '0';
+    if (finalVulnAuraSelect) finalVulnAuraSelect.value = '0';
     singleDisplayConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
     singleActualConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
     singleDisplayConversion = 0;
@@ -698,6 +748,8 @@ function resetAll() {
     renderCustomPenVulnEntries();
     customFinalDmgEntries = [];
     renderCustomFinalDmgEntries();
+    customFinalVulnEntries = [];
+    renderCustomFinalVulnEntries();
     toggleLifeRows();
     updatePenetration();
 }
@@ -747,12 +799,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addPenVulnBtn) addPenVulnBtn.addEventListener('click', addCustomPenVulnEntry);
     const addFinalBtn = document.getElementById('addCustomFinalDmgBtn');
     if (addFinalBtn) addFinalBtn.addEventListener('click', addCustomFinalDmgEntry);
+    const addFinalVulnBtn = document.getElementById('addCustomFinalVulnBtn');
+    if (addFinalVulnBtn) addFinalVulnBtn.addEventListener('click', addCustomFinalVulnEntry);
 });
 
 // ================= 记录管理模块 =================
 (function() {
     let penRecords = [];
-    const PEN_STORAGE_KEY = 'PenetrationRecords_V2_0';
+    const PEN_STORAGE_KEY = 'PenetrationRecords_V2_1'; // 版本升级，因为新增最终易伤字段
+
     function loadPenRecords() {
         const raw = localStorage.getItem(PEN_STORAGE_KEY);
         if (raw) {
@@ -767,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPenRecords();
 
     const fieldMeta = {
-        // 单攻模式字段（仅用于保存，但双攻模式也会保存对应的值）
+        // 单攻/双攻字段
         penAtkBaseSingle: { name: "基础攻击力(单)", zone: "⚔️ 攻击区间", unit: "", alwaysShow: true },
         penAtkPhys: { name: "基础物攻", zone: "⚔️ 攻击区间", unit: "" },
         penAtkMagic: { name: "基础魔攻", zone: "⚔️ 攻击区间", unit: "" },
@@ -805,7 +860,9 @@ document.addEventListener('DOMContentLoaded', () => {
         penNightmare: { name: "梦魇", zone: "🎯 穿透易伤区间", unit: "%" },
         penPenVuln: { name: "穿透易伤", zone: "🎯 穿透易伤区间", unit: "%" },
         penImmunity: { name: "免疫减免", zone: "🎯 穿透易伤区间", unit: "%" },
-        attackMode: { name: "结算模式", zone: "🌐 全局设置" }
+        attackMode: { name: "结算模式", zone: "🌐 全局设置" },
+        // 新增最终易伤字段
+        finalVulnAura: { name: "塞娜光环", zone: "🎯 最终易伤区间", unit: "%" }
     };
 
     function isFieldEmptyValue(key, value) {
@@ -846,6 +903,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return val === '10' ? '有 (+10%)' : '无';
         } else if (key === 'attackMode') {
             return val === 'single' ? '单攻结算' : '双攻结算';
+        } else if (key === 'finalVulnAura') {
+            return val === '10' ? '有 (+10%)' : '无';
         }
         const unit = fieldMeta[key]?.unit || '';
         return val + (unit ? unit : '');
@@ -890,6 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
             penNightmare: penNightmare.value,
             penPenVuln: penPenVuln.value,
             penImmunity: penImmunity.value,
+            finalVulnAura: finalVulnAuraSelect ? finalVulnAuraSelect.value : '0',
             singleDisplayConvBase: singleDisplayConvParams.base,
             singleDisplayConvMultiplier: singleDisplayConvParams.multiplier,
             singleDisplayConvBonus: singleDisplayConvParams.bonus,
@@ -911,7 +971,8 @@ document.addEventListener('DOMContentLoaded', () => {
             customLifeBonusEntries: customLifeBonusEntries.map(e => ({ name: e.name, percent: e.percent })),
             customPenDmgEntries: customPenDmgEntries.map(e => ({ name: e.name, percent: e.percent })),
             customPenVulnEntries: customPenVulnEntries.map(e => ({ name: e.name, percent: e.percent })),
-            customFinalDmgEntries: customFinalDmgEntries.map(e => ({ name: e.name, percent: e.percent }))
+            customFinalDmgEntries: customFinalDmgEntries.map(e => ({ name: e.name, percent: e.percent })),
+            customFinalVulnEntries: customFinalVulnEntries.map(e => ({ name: e.name, percent: e.percent }))
         };
     }
     function applyRecordToCalculator(record) {
@@ -957,6 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
         penNightmare.value = config.penNightmare || '0';
         penPenVuln.value = config.penPenVuln || '0';
         penImmunity.value = config.penImmunity || '0';
+        if (finalVulnAuraSelect) finalVulnAuraSelect.value = config.finalVulnAura || '0';
         singleDisplayConvParams = {
             base: parseFloat(config.singleDisplayConvBase) || 0,
             multiplier: parseFloat(config.singleDisplayConvMultiplier) || 0,
@@ -1009,12 +1071,16 @@ document.addEventListener('DOMContentLoaded', () => {
             customFinalDmgEntries = config.customFinalDmgEntries.map(e => ({ name: e.name, percent: e.percent }));
             renderCustomFinalDmgEntries();
         }
+        if (config.customFinalVulnEntries) {
+            customFinalVulnEntries = config.customFinalVulnEntries.map(e => ({ name: e.name, percent: e.percent }));
+            renderCustomFinalVulnEntries();
+        }
         toggleLifeRows();
         updateAttackUI();
         updatePenetration();
     }
     function getGroupedDetails(config) {
-        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '📊 百分比区间', '✨ 穿透增伤区间', '🎯 穿透易伤区间', '✨ 最终增伤区间', '🌐 全局设置'];
+        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '📊 百分比区间', '✨ 穿透增伤区间', '🎯 穿透易伤区间', '✨ 最终增伤区间', '🎯 最终易伤区间', '🌐 全局设置'];
         const groups = {};
         for (const [key, value] of Object.entries(config)) {
             if (key === 'dotEntries') continue;
@@ -1030,7 +1096,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { entries: config.customLifeBonusEntries, zone: '📊 百分比区间 (自定义)' },
             { entries: config.customPenDmgEntries, zone: '✨ 穿透增伤区间 (自定义)' },
             { entries: config.customPenVulnEntries, zone: '🎯 穿透易伤区间 (自定义)' },
-            { entries: config.customFinalDmgEntries, zone: '✨ 最终增伤区间 (自定义)' }
+            { entries: config.customFinalDmgEntries, zone: '✨ 最终增伤区间 (自定义)' },
+            { entries: config.customFinalVulnEntries, zone: '🎯 最终易伤区间 (自定义)' }
         ];
         for (const cz of customZones) {
             if (cz.entries && cz.entries.length) {
@@ -1105,7 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     async function renderMultiCompare(recordsList) {
         if (!recordsList || recordsList.length < 2) return;
-        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '📊 百分比区间', '✨ 穿透增伤区间', '🎯 穿透易伤区间', '✨ 最终增伤区间', '🌐 全局设置'];
+        const zoneOrder = ['⚔️ 攻击区间', '⚔️ 攻击区间 (实际加算)', '📊 百分比区间', '✨ 穿透增伤区间', '🎯 穿透易伤区间', '✨ 最终增伤区间', '🎯 最终易伤区间', '🌐 全局设置'];
         const zoneMap = {};
         for (const [key, meta] of Object.entries(fieldMeta)) {
             if (!zoneMap[meta.zone]) zoneMap[meta.zone] = [];
@@ -1126,7 +1193,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'customLifeBonusEntries', zone: '📊 百分比区间', title: '生命值结算自定义' },
             { key: 'customPenDmgEntries', zone: '✨ 穿透增伤区间', title: '穿透增伤自定义' },
             { key: 'customPenVulnEntries', zone: '🎯 穿透易伤区间', title: '穿透易伤自定义' },
-            { key: 'customFinalDmgEntries', zone: '✨ 最终增伤区间', title: '最终增伤自定义' }
+            { key: 'customFinalDmgEntries', zone: '✨ 最终增伤区间', title: '最终增伤自定义' },
+            { key: 'customFinalVulnEntries', zone: '🎯 最终易伤区间', title: '最终易伤自定义' }
         ];
         for (const ct of customTypes) {
             let allNames = new Set();
@@ -1185,7 +1253,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             html += '</tr>';
         }
-        html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">✨ 伤害对比</td></tr>';
+        html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">✨ 伤害对比</tr>';
         html += '<tr><td class="field-name">穿透伤害</td>';
         for (const rec of recordsList) {
             html += `<td>${escapeHtml(getRecordDamage(rec))}</td>`;

@@ -17,7 +17,7 @@
     </h1>
     <div class="badge-reference">
         📘 参考《铃兰之剑PVE基础攻略》 · 第3部分 穿透伤害原理<br>
-        <code>穿透伤害 = (实际攻击力 × 克制倍率 × 技能倍率/100 + 生命值结算部分) × (1+穿透增伤%) × 易伤乘数</code><br>
+        <code>穿透伤害 = (实际攻击力 × 克制倍率 × 技能倍率/100 + 生命值结算部分) × (1+穿透增伤%) × 易伤乘数 × 最终增伤乘数 × 最终易伤乘数</code><br>
         ⚡ 易伤乘数 = (1+伤口%) × min( (1+傀儡%) × (1+梦魇%) × (1+穿透易伤%) × (1-免疫减免%) , 3.0 )<br>
         ※ 狼姐伤口独立于300%上限之外
     </div>
@@ -109,7 +109,6 @@
             </div>
         </div>
 
-        <!-- 其他卡片（保持不变） -->
         <!-- 百分比区间卡片 -->
         <div class="section-card">
             <div class="section-title">📊 百分比区间 <span>生命值结算部分</span></div>
@@ -162,13 +161,28 @@
             <div class="stat-badge">易伤乘数 = <span id="penVulnMult">1.00x</span></div>
         </div>
 
-        <!-- 最终增伤区间卡片 -->
+        <!-- 最终增伤区间（加算） -->
         <div class="section-card">
-            <div class="section-title">✨ 最终增伤区间 <span>独立乘区</span></div>
-            <div class="row"><div><label>大帝个性寒境</label><select id="penEmperorCold"><option value="0">无 (0%)</option><option value="10">有 (+10%)</option></select></div><div></div></div>
+            <div class="section-title">✨ 最终增伤区间 <span>独立乘区（加算）</span></div>
+            <div class="row"><div><label>无视守护·寒境</label><select id="penEmperorCold"><option value="0">无 (0%)</option><option value="10">有 (+10%)</option></select></div><div></div></div>
             <div id="customFinalDmgContainer" style="margin-bottom: 10px;"></div>
             <button id="addCustomFinalDmgBtn" class="btn action-btn" style="width:100%; margin-top: 8px;">➕ 添加自定义条目</button>
             <div class="stat-badge" style="margin-top: 20px;">最终增伤乘数 = <span id="finalDmgMult">1.00x</span></div>
+        </div>
+
+        <!-- 新增：最终易伤区间（乘算，仅塞娜光环） -->
+        <div class="section-card">
+            <div class="section-title">🎯 最终易伤区间 <span>独立乘区（乘算）</span></div>
+            <div class="row">
+                <div><label>塞娜光环</label><select id="finalVulnAura">
+                    <option value="0">无 (0%)</option>
+                    <option value="10">有 (10%)</option>
+                </select></div>
+                <div></div>
+            </div>
+            <div id="customFinalVulnContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomFinalVulnBtn" class="btn action-btn" style="width:100%; margin-top: 8px;">➕ 添加最终易伤自定义条目</button>
+            <div class="stat-badge" style="margin-top: 20px;">最终易伤乘数 = <span id="finalVulnMult">1.00x</span></div>
         </div>
     </div> <!-- 结束 section-grid -->
 

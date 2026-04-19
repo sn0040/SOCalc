@@ -143,6 +143,42 @@
             </div>
         </div>  <!-- 闭合穿透/持续易伤 & 伤口 卡片 -->
     </div>  <!-- 闭合第二个 .section-grid -->
+        <!-- 最终增伤区间（加算） -->
+    <div class="section-grid">
+        <!-- 最终增伤区间（加算） -->
+        <div class="section-card">
+            <div class="section-title">✨ 最终增伤区间 <span>独立乘区（加算）</span></div>
+            <div class="row">
+                <div><label>无视守护·寒境</label>
+                    <select id="finalDmgSkill">
+                        <option value="0">无 (0%)</option>
+                        <option value="10">有 (10%)</option>
+                    </select>
+                </div>
+                <div></div>
+            </div>
+            <div id="customFinalDmgContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomFinalDmgBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加最终增伤自定义条目</button>
+            <div class="stat-badge">最终增伤乘数 = <span id="statFinalMult">1.00x</span></div>
+        </div>
+
+        <!-- 最终易伤区间（乘算） -->
+        <div class="section-card">
+            <div class="section-title">🎯 最终易伤区间 <span>独立乘区（乘算）</span></div>
+            <div class="row">
+                <div><label>塞娜光环</label>
+                    <select id="finalVulnAura">
+                        <option value="0">无 (0%)</option>
+                        <option value="10">有 (10%)</option>
+                    </select>
+                </div>
+                <div></div>
+            </div>
+            <div id="customFinalVulnContainer" style="margin-bottom: 10px;"></div>
+            <button id="addCustomFinalVulnBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加最终易伤自定义条目</button>
+            <div class="stat-badge">最终易伤乘数 = <span id="statFinalVulnMult">1.00x</span></div>
+        </div>
+    </div>
 
     <div class="result-panel">
         <div class="result-row"><div class="result-item"><div class="result-label">🔥 DOT总伤害</div><div class="result-number" id="dotFinalDisplay"><small>🔥</small> 0</div></div></div>
