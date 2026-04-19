@@ -468,7 +468,7 @@ function getNum(id) { return parseFloat(document.getElementById(id).value) || 0;
 
 function getProfAtkBonus() {
     const prof = penProfession.value;
-    if (prof === 'watcher') return 12;
+    if (prof === 'watcher') return 0;
     return 0;
 }
 function getNormalPercent() {
@@ -487,6 +487,8 @@ function getExtraPercent() {
                (parseFloat(penLowland.value) || 0) +
                (parseFloat(penHangmanMark.value) || 0) +
                (parseFloat(penWeaknessInsight.value) || 0);
+    // 守望者天赋 +12% 攻击（属于实际攻击区间）
+    if (penProfession.value === 'watcher') base += 12;
     let customSum = customActualAtkEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
     base += customSum;
     return base;

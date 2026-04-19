@@ -555,7 +555,7 @@ function getProfessionBonuses(prof, hasBackAttack) {
     else if (prof === 'smasher35') dmgBonus = 35;
     else if (prof === 'defender28') dmgBonus = 28;
     else if (prof === 'assassin') { ignoreProf = 15; critDmgBonus = 11; critRateBonus = 5; if (hasBackAttack) { critDmgBonus += 3; critRateBonus += 3; } }
-    else if (prof === 'watcher') { dmgBonus = 20; atkPercentBonus = 12; }
+    else if (prof === 'watcher') { dmgBonus = 20; atkPercentBonus = 0; }
     else if (prof === 'destroyer30') dmgBonus = 30;
     return { atkPercentBonus, dmgBonus, ignoreProf, critDmgBonus, critRateBonus };
 }
@@ -591,6 +591,8 @@ function updateAll() {
     extraPercent += parseFloat(lowlandSelect.value) || 0;
     extraPercent += parseFloat(hangmanMarkSelect.value) || 0;
     extraPercent += parseFloat(weaknessInsightSelect.value) || 0;
+    // 守望者天赋 +12% 攻击（属于实际攻击区间）
+    if (profession === 'watcher') extraPercent += 12;
     let customActualSum = customActualAtkEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
     extraPercent += customActualSum;
 
