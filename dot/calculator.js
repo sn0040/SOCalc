@@ -1,290 +1,24 @@
 // dot/calculator.js
 import { preloadScreenshot, loadHtml2Canvas, showLoading, hideLoading, showScreenshotError } from '../common/screenshot.js';
+import { computeConversionValue } from '../common/conversion.js';
+import { CustomEntryList } from '../common/utils.js';
+import { getTarotName, getProfessionName, getImmunityName, FINAL_DMG_SKILL_DOT, FINAL_VULN_AURA, INFECTION_PERCENT, INFECTION_MAP, DOT_PROJECT, DOT_FIXED_RATE } from '../common/gameData.js';
+import { calculateDot, calculateDotEntry } from './calc.js';
+import { createRecordManager } from '../common/recordManager.js';
 
-// ================= 自定义条目数组（全局） =================
-let customDisplayAtkEntries = [];
-let customActualAtkEntries = [];
-let customDotIncEntries = [];
-let customPenVulnEntries = [];
-let customPersistentVulnEntries = [];
-let customFinalDmgEntries = [];   // 最终增伤自定义条目（加算）
-let customFinalVulnEntries = [];  // 最终易伤自定义条目（乘算）
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
-}
-
-// ================= 渲染函数 =================
-function renderCustomDisplayAtkEntries() {
-    const container = document.getElementById('customDisplayAtkContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    for (let i = 0; i < customDisplayAtkEntries.length; i++) {
-        const entry = customDisplayAtkEntries[i];
-        const div = document.createElement('div');
-        div.className = 'row';
-        div.style.marginBottom = '8px';
-        div.innerHTML = `
-            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
-        `;
-        const nameInput = div.querySelector('.custom-name');
-        const percentInput = div.querySelector('.custom-percent');
-        const delBtn = div.querySelector('.delete-custom');
-        nameInput.addEventListener('change', () => { customDisplayAtkEntries[i].name = nameInput.value; });
-        percentInput.addEventListener('input', () => {
-            customDisplayAtkEntries[i].percent = parseFloat(percentInput.value) || 0;
-            updateAllDOT();
-        });
-        delBtn.addEventListener('click', () => {
-            customDisplayAtkEntries.splice(i, 1);
-            renderCustomDisplayAtkEntries();
-            updateAllDOT();
-        });
-        container.appendChild(div);
-    }
-}
-function addCustomDisplayAtkEntry() {
-    customDisplayAtkEntries.push({ name: '', percent: 0 });
-    renderCustomDisplayAtkEntries();
-    updateAllDOT();
-}
-
-function renderCustomActualAtkEntries() {
-    const container = document.getElementById('customActualAtkContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    for (let i = 0; i < customActualAtkEntries.length; i++) {
-        const entry = customActualAtkEntries[i];
-        const div = document.createElement('div');
-        div.className = 'row';
-        div.style.marginBottom = '8px';
-        div.innerHTML = `
-            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
-        `;
-        const nameInput = div.querySelector('.custom-name');
-        const percentInput = div.querySelector('.custom-percent');
-        const delBtn = div.querySelector('.delete-custom');
-        nameInput.addEventListener('change', () => { customActualAtkEntries[i].name = nameInput.value; });
-        percentInput.addEventListener('input', () => {
-            customActualAtkEntries[i].percent = parseFloat(percentInput.value) || 0;
-            updateAllDOT();
-        });
-        delBtn.addEventListener('click', () => {
-            customActualAtkEntries.splice(i, 1);
-            renderCustomActualAtkEntries();
-            updateAllDOT();
-        });
-        container.appendChild(div);
-    }
-}
-function addCustomActualAtkEntry() {
-    customActualAtkEntries.push({ name: '', percent: 0 });
-    renderCustomActualAtkEntries();
-    updateAllDOT();
-}
-
-function renderCustomDotIncEntries() {
-    const container = document.getElementById('customDotIncContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    for (let i = 0; i < customDotIncEntries.length; i++) {
-        const entry = customDotIncEntries[i];
-        const div = document.createElement('div');
-        div.className = 'row';
-        div.style.marginBottom = '8px';
-        div.innerHTML = `
-            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
-        `;
-        const nameInput = div.querySelector('.custom-name');
-        const percentInput = div.querySelector('.custom-percent');
-        const delBtn = div.querySelector('.delete-custom');
-        nameInput.addEventListener('change', () => { customDotIncEntries[i].name = nameInput.value; });
-        percentInput.addEventListener('input', () => {
-            customDotIncEntries[i].percent = parseFloat(percentInput.value) || 0;
-            updateAllDOT();
-        });
-        delBtn.addEventListener('click', () => {
-            customDotIncEntries.splice(i, 1);
-            renderCustomDotIncEntries();
-            updateAllDOT();
-        });
-        container.appendChild(div);
-    }
-}
-function addCustomDotIncEntry() {
-    customDotIncEntries.push({ name: '', percent: 0 });
-    renderCustomDotIncEntries();
-    updateAllDOT();
-}
-
-function renderCustomPenVulnEntries() {
-    const container = document.getElementById('customPenVulnContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    for (let i = 0; i < customPenVulnEntries.length; i++) {
-        const entry = customPenVulnEntries[i];
-        const div = document.createElement('div');
-        div.className = 'row';
-        div.style.marginBottom = '8px';
-        div.innerHTML = `
-            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
-        `;
-        const nameInput = div.querySelector('.custom-name');
-        const percentInput = div.querySelector('.custom-percent');
-        const delBtn = div.querySelector('.delete-custom');
-        nameInput.addEventListener('change', () => { customPenVulnEntries[i].name = nameInput.value; });
-        percentInput.addEventListener('input', () => {
-            customPenVulnEntries[i].percent = parseFloat(percentInput.value) || 0;
-            updateAllDOT();
-        });
-        delBtn.addEventListener('click', () => {
-            customPenVulnEntries.splice(i, 1);
-            renderCustomPenVulnEntries();
-            updateAllDOT();
-        });
-        container.appendChild(div);
-    }
-}
-function addCustomPenVulnEntry() {
-    customPenVulnEntries.push({ name: '', percent: 0 });
-    renderCustomPenVulnEntries();
-    updateAllDOT();
-}
-
-function renderCustomPersistentVulnEntries() {
-    const container = document.getElementById('customPersistentVulnContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    for (let i = 0; i < customPersistentVulnEntries.length; i++) {
-        const entry = customPersistentVulnEntries[i];
-        const div = document.createElement('div');
-        div.className = 'row';
-        div.style.marginBottom = '8px';
-        div.innerHTML = `
-            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
-        `;
-        const nameInput = div.querySelector('.custom-name');
-        const percentInput = div.querySelector('.custom-percent');
-        const delBtn = div.querySelector('.delete-custom');
-        nameInput.addEventListener('change', () => { customPersistentVulnEntries[i].name = nameInput.value; });
-        percentInput.addEventListener('input', () => {
-            customPersistentVulnEntries[i].percent = parseFloat(percentInput.value) || 0;
-            updateAllDOT();
-        });
-        delBtn.addEventListener('click', () => {
-            customPersistentVulnEntries.splice(i, 1);
-            renderCustomPersistentVulnEntries();
-            updateAllDOT();
-        });
-        container.appendChild(div);
-    }
-}
-function addCustomPersistentVulnEntry() {
-    customPersistentVulnEntries.push({ name: '', percent: 0 });
-    renderCustomPersistentVulnEntries();
-    updateAllDOT();
-}
-
-// ================= 最终增伤自定义条目（加算） =================
-function renderCustomFinalDmgEntries() {
-    const container = document.getElementById('customFinalDmgContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    for (let i = 0; i < customFinalDmgEntries.length; i++) {
-        const entry = customFinalDmgEntries[i];
-        const div = document.createElement('div');
-        div.className = 'row';
-        div.style.marginBottom = '8px';
-        div.innerHTML = `
-            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
-        `;
-        const nameInput = div.querySelector('.custom-name');
-        const percentInput = div.querySelector('.custom-percent');
-        const delBtn = div.querySelector('.delete-custom');
-        nameInput.addEventListener('change', () => { customFinalDmgEntries[i].name = nameInput.value; });
-        percentInput.addEventListener('input', () => {
-            customFinalDmgEntries[i].percent = parseFloat(percentInput.value) || 0;
-            updateAllDOT();
-        });
-        delBtn.addEventListener('click', () => {
-            customFinalDmgEntries.splice(i, 1);
-            renderCustomFinalDmgEntries();
-            updateAllDOT();
-        });
-        container.appendChild(div);
-    }
-}
-function addCustomFinalDmgEntry() {
-    customFinalDmgEntries.push({ name: '', percent: 0 });
-    renderCustomFinalDmgEntries();
-    updateAllDOT();
-}
-
-// ================= 最终易伤自定义条目（乘算） =================
-function renderCustomFinalVulnEntries() {
-    const container = document.getElementById('customFinalVulnContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    for (let i = 0; i < customFinalVulnEntries.length; i++) {
-        const entry = customFinalVulnEntries[i];
-        const div = document.createElement('div');
-        div.className = 'row';
-        div.style.marginBottom = '8px';
-        div.innerHTML = `
-            <input type="text" class="custom-name" value="${escapeHtml(entry.name)}" placeholder="名称" style="flex:2;">
-            <input type="number" class="custom-percent" value="${entry.percent === 0 ? '' : entry.percent}" step="1" placeholder="百分比" style="flex:1;">
-            <button class="small-btn delete-custom" data-index="${i}" >删除</button>
-        `;
-        const nameInput = div.querySelector('.custom-name');
-        const percentInput = div.querySelector('.custom-percent');
-        const delBtn = div.querySelector('.delete-custom');
-        nameInput.addEventListener('change', () => { customFinalVulnEntries[i].name = nameInput.value; });
-        percentInput.addEventListener('input', () => {
-            customFinalVulnEntries[i].percent = parseFloat(percentInput.value) || 0;
-            updateAllDOT();
-        });
-        delBtn.addEventListener('click', () => {
-            customFinalVulnEntries.splice(i, 1);
-            renderCustomFinalVulnEntries();
-            updateAllDOT();
-        });
-        container.appendChild(div);
-    }
-}
-function addCustomFinalVulnEntry() {
-    customFinalVulnEntries.push({ name: '', percent: 0 });
-    renderCustomFinalVulnEntries();
-    updateAllDOT();
-}
+// ================= 自定义条目管理器 =================
+const customDisplayAtkList = new CustomEntryList({ containerId: 'customDisplayAtkContainer', onUpdate: updateAllDOT });
+const customActualAtkList = new CustomEntryList({ containerId: 'customActualAtkContainer', onUpdate: updateAllDOT });
+const customDotIncList = new CustomEntryList({ containerId: 'customDotIncContainer', onUpdate: updateAllDOT });
+const customPenVulnList = new CustomEntryList({ containerId: 'customPenVulnContainer', onUpdate: updateAllDOT });
+const customPersistentVulnList = new CustomEntryList({ containerId: 'customPersistentVulnContainer', onUpdate: updateAllDOT });
+const customFinalDmgList = new CustomEntryList({ containerId: 'customFinalDmgContainer', onUpdate: updateAllDOT });
+const customFinalVulnList = new CustomEntryList({ containerId: 'customFinalVulnContainer', onUpdate: updateAllDOT });
 
 // ================= 攻击转化相关（原生实现） =================
 let physConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
 let magicConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
 let physConversion = 0, magicConversion = 0;
-
-function computeConversionValue(base, mult, bonus, hiddenBonus) {
-    const multiplier = mult / 100;
-    const bonusTotal = (bonus + hiddenBonus) / 100;
-    return base * (1 + bonusTotal) * multiplier;
-}
 
 physConversion = computeConversionValue(physConvParams.base, physConvParams.multiplier, physConvParams.bonus, physConvParams.hiddenBonus);
 magicConversion = computeConversionValue(magicConvParams.base, magicConvParams.multiplier, magicConvParams.bonus, magicConvParams.hiddenBonus);
@@ -349,13 +83,13 @@ function getNormalPercent() {
                (parseFloat(document.getElementById('basicAura').value) || 0) +
                (parseFloat(document.getElementById('coordAttack').value) || 0);
     base += (document.getElementById('profession').value === 'watcher' ? 12 : 0);
-    let customSum = customDisplayAtkEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
+    let customSum = customDisplayAtkList.entries.reduce((sum, e) => sum + (e.percent || 0), 0);
     base += customSum;
     return base;
 }
 function getExtraPercent() {
     let base = 0;
-    let customSum = customActualAtkEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
+    let customSum = customActualAtkList.entries.reduce((sum, e) => sum + (e.percent || 0), 0);
     base += customSum;
     return base;
 }
@@ -391,156 +125,97 @@ function updatePhysMagicDisplay() {
     document.getElementById('magicConversion').innerText = Math.round(magicConversion);
 }
 
-// ================= 全局乘区函数 =================
-function getIncMult() {
-    let tarotVal = (document.getElementById('tarot').value === 'hangman' ? 20 : 0);
-    let buff = parseFloat(document.getElementById('incBuff').value) || 0;
-    let yujieUlt = parseFloat(document.getElementById('yujieUlt').value) || 0;
-    let yujiePersonality = parseFloat(document.getElementById('yujiePersonality').value) || 0;
-    let hasha = parseFloat(document.getElementById('hashaAura').value) || 0;
-    let customSum = customDotIncEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
-    let total = 1 + (tarotVal + buff + yujieUlt + yujiePersonality + hasha + customSum) / 100;
-    document.getElementById('incMult').innerText = total.toFixed(2) + 'x';
-    return total;
-}
-function getPenMult() {
-    let puppet = 1 + (parseFloat(document.getElementById('puppet').value) || 0)/100;
-    let nightmare = 1 + (parseFloat(document.getElementById('nightmare').value) || 0)/100;
-    let penVuln = 1 + (parseFloat(document.getElementById('penVuln').value) || 0)/100;
-    let customMult = 1;
-    for (let entry of customPenVulnEntries) {
-        customMult *= (1 + (entry.percent || 0) / 100);
-    }
-    let mult = puppet * nightmare * penVuln * customMult;
-    mult = Math.min(mult, 3.0);
-    document.getElementById('penMult').innerText = mult.toFixed(2) + 'x';
-    return mult;
-}
-function getPersistentMult() {
-    let momo = 1 + (parseFloat(document.getElementById('momoAura').value) || 0)/100;
-    let boqi = 1 + (parseFloat(document.getElementById('boqiAura').value) || 0)/100;
-    let charm = 1 + (parseFloat(document.getElementById('charm').value) || 0)/100;
-    let customMult = 1;
-    for (let entry of customPersistentVulnEntries) {
-        customMult *= (1 + (entry.percent || 0) / 100);
-    }
-    let total = momo * boqi * charm * customMult;
-    total = Math.min(total, 3.0);
-    document.getElementById('persistentMult').innerText = total.toFixed(2) + 'x';
-    return total;
-}
-function getWoundMult() {
-    let layers = parseInt(document.getElementById('woundLayers').value) || 0;
-    let woundMult = Math.pow(1.12, layers);
-    document.getElementById('woundMult').innerText = woundMult.toFixed(2) + 'x';
-    return woundMult;
-}
-
-// ================= DOT条目管理（支持生命百分比类） =================
+// ================= DOT条目管理 =================
 let dotEntries = [];
 let nextEntryId = 1;
 
-function getEntryMultiplier(entryDiv) {
-    let mode = entryDiv.querySelector('.entry-mode').value;
+// ================= 读取 DOT 条目参数 =================
+function readDotEntryParams(entryDiv) {
+    const mode = entryDiv.querySelector('.entry-mode').value;
+    const ticks = parseInt(entryDiv.querySelector('.entry-tick-count').value) || 0;
     if (mode === 'standard') {
-        let fixedSelect = entryDiv.querySelector('.entry-fixed');
-        if (fixedSelect.value === 'custom') {
-            return (parseFloat(entryDiv.querySelector('.entry-custom-percent').value) || 0) / 100;
-        } else {
-            return parseFloat(fixedSelect.value);
-        }
-    } else if (mode === 'lifeLoss' || mode === 'scarTear') {
-        return (parseFloat(entryDiv.querySelector('.entry-percent-input').value) || 0) / 100;
-    } else {
-        return 0;
+        const fixedSelect = entryDiv.querySelector('.entry-fixed');
+        const multiplier = fixedSelect.value === 'custom'
+            ? (parseFloat(entryDiv.querySelector('.entry-custom-percent').value) || 0) / 100
+            : parseFloat(fixedSelect.value);
+        return { mode, attackBase: getPhysActual() + getMagicActual(), multiplier, ticks };
     }
-}
-function getAttackBase(entryDiv) {
-    let mode = entryDiv.querySelector('.entry-mode').value;
-    if (mode === 'standard') {
-        return getPhysActual() + getMagicActual();
-    } else if (mode === 'lifeLoss' || mode === 'scarTear') {
-        let attr = entryDiv.querySelector('.entry-attr').value;
-        if (attr === 'phys') return getPhysActual();
-        else return getMagicActual();
-    } else {
-        return 0;
+    if (mode === 'lifeLoss' || mode === 'scarTear') {
+        const attr = entryDiv.querySelector('.entry-attr').value;
+        const attackBase = attr === 'phys' ? getPhysActual() : getMagicActual();
+        const multiplier = (parseFloat(entryDiv.querySelector('.entry-percent-input').value) || 0) / 100;
+        return { mode, attackBase, multiplier, ticks };
     }
-}
-function getEntryTickCount(entryDiv) {
-    return parseInt(entryDiv.querySelector('.entry-tick-count').value) || 0;
-}
-function computeEntrySingleDamage(entryDiv) {
-    let mode = entryDiv.querySelector('.entry-mode').value;
-    let inc = getIncMult();
-    let persistent = getPersistentMult();
-    let pen = getPenMult();
-    let wound = getWoundMult();
-    let immunity = parseFloat(document.getElementById('immunity').value) || 0;
-    
-    if (mode === 'standard' || mode === 'lifeLoss' || mode === 'scarTear') {
-        // 攻击力类
-        let attackBase = getAttackBase(entryDiv);
-        let multiplier = getEntryMultiplier(entryDiv);
-        let base = attackBase * multiplier;
-        let total = base * inc * persistent * pen * wound;
-        return total;
-    } else if (mode === 'hpPercent') {
-        // 生命百分比类
-        let project = entryDiv.querySelector('.entry-hp-project').value;
-        let enemyHp = parseFloat(entryDiv.querySelector('.entry-enemy-hp').value) || 0;
-        let percent = 0;
-        const infectionMap = {1:4,2:8,3:12,4:18,5:26,6:36,7:46,8:58,9:72};
-        if (project === 'infection') {
-            let layers = parseInt(entryDiv.querySelector('.entry-infection-layers').value);
-            percent = infectionMap[layers] / 100;
-        } else if (project === 'burn') {
-            percent = 0.10;
-        } else if (project === 'stigma') {
-            percent = 0.05;
-        } else if (project === 'erosion') {
-            percent = 0.04;
-        } else if (project === 'darkfire') {
-            percent = 0.35;
-        } else if (project === 'ancestor') {
-            percent = 0.35;
-        }
-        let base = enemyHp * percent;
-        let total = base * inc * persistent * pen * (1 - immunity);
-        return total;
+    if (mode === 'hpPercent') {
+        const project = entryDiv.querySelector('.entry-hp-project').value;
+        const infectionLayers = parseInt(entryDiv.querySelector('.entry-infection-layers').value) || 0;
+        const enemyHp = parseFloat(entryDiv.querySelector('.entry-enemy-hp').value) || 0;
+        const immunity = parseFloat(document.getElementById('immunity').value) || 0;
+        return { mode, project, infectionLayers, enemyHp, immunity, ticks };
     }
-    return 0;
+    return { mode, ticks: 0 };
 }
+
+// ================= 收集输入 =================
+function collectInputs() {
+    return {
+        physBase: parseFloat(document.getElementById('physBase').value) || 0,
+        magicBase: parseFloat(document.getElementById('magicBase').value) || 0,
+        normalPercent: getNormalPercent(),
+        extraPercent: getExtraPercent(),
+        physConversion: physConversion,
+        magicConversion: magicConversion,
+        tarot: document.getElementById('tarot').value,
+        incBuff: parseFloat(document.getElementById('incBuff').value) || 0,
+        yujieUlt: parseFloat(document.getElementById('yujieUlt').value) || 0,
+        yujiePersonality: parseFloat(document.getElementById('yujiePersonality').value) || 0,
+        hashaAura: parseFloat(document.getElementById('hashaAura').value) || 0,
+        puppet: parseFloat(document.getElementById('puppet').value) || 0,
+        nightmare: parseFloat(document.getElementById('nightmare').value) || 0,
+        penVuln: parseFloat(document.getElementById('penVuln').value) || 0,
+        momoAura: parseFloat(document.getElementById('momoAura').value) || 0,
+        boqiAura: parseFloat(document.getElementById('boqiAura').value) || 0,
+        charm: parseFloat(document.getElementById('charm').value) || 0,
+        woundLayers: parseInt(document.getElementById('woundLayers').value) || 0,
+        finalDmgSkill: parseFloat(document.getElementById('finalDmgSkill').value) || 0,
+        finalVulnAura: parseFloat(document.getElementById('finalVulnAura').value) || 0,
+        customDotIncEntries: customDotIncList.entries.map(e => e.percent || 0),
+        customPenVulnEntries: customPenVulnList.entries.map(e => e.percent || 0),
+        customPersistentVulnEntries: customPersistentVulnList.entries.map(e => e.percent || 0),
+        customFinalDmgEntries: customFinalDmgList.entries.map(e => e.percent || 0),
+        customFinalVulnEntries: customFinalVulnList.entries.map(e => e.percent || 0),
+    };
+}
+
+// ================= 渲染结果 =================
+function renderResults(r) {
+    document.getElementById('totalAtk').innerText = r.totalAtk;
+    document.getElementById('incMult').innerText = r.incMult.toFixed(2) + 'x';
+    document.getElementById('penMult').innerText = r.penMult.toFixed(2) + 'x';
+    document.getElementById('persistentMult').innerText = r.persistentMult.toFixed(2) + 'x';
+    document.getElementById('woundMult').innerText = r.woundMult.toFixed(2) + 'x';
+    document.getElementById('statFinalMult').innerText = r.finalDmgMult.toFixed(2) + 'x';
+    document.getElementById('statFinalVulnMult').innerText = r.finalVulnMult.toFixed(2) + 'x';
+    document.getElementById('dotTotal').innerText = r.totalDamage;
+    document.getElementById('dotFinalDisplay').innerHTML = `<small>🔥</small> ${r.totalDamage}`;
+    updatePhysMagicDisplay();
+}
+
+// ================= 主计算逻辑 =================
 function updateAllDOT() {
+    const inputs = collectInputs();
+    const mults = calculateDot(inputs);
+
     let totalDamage = 0;
-    let totalAtk = getPhysActual() + getMagicActual();
-    document.getElementById('totalAtk').innerText = Math.round(totalAtk);
-    
-    // 最终增伤（加算）
-    let finalDmgSkill = parseFloat(document.getElementById('finalDmgSkill').value) || 0;
-    let customFinalDmgSum = customFinalDmgEntries.reduce((sum, e) => sum + (e.percent || 0), 0);
-    let finalDmgMult = 1 + (finalDmgSkill + customFinalDmgSum) / 100;
-    document.getElementById('statFinalMult').innerText = finalDmgMult.toFixed(2) + 'x';
-    
-    // 最终易伤（乘算）
-    let finalVulnAura = parseFloat(document.getElementById('finalVulnAura').value) || 0;
-    let finalVulnMult = (1 + finalVulnAura / 100);
-    for (let entry of customFinalVulnEntries) {
-        finalVulnMult *= (1 + (entry.percent || 0) / 100);
-    }
-    document.getElementById('statFinalVulnMult').innerText = finalVulnMult.toFixed(2) + 'x';
-    
     for (let entryDiv of dotEntries) {
-        let single = computeEntrySingleDamage(entryDiv);
-        let ticks = getEntryTickCount(entryDiv);
-        let entryTotal = single * ticks * finalDmgMult * finalVulnMult;
-        let damageSpan = entryDiv.querySelector('.entry-damage-value');
-        damageSpan.innerText = Math.round(entryTotal);
+        const params = readDotEntryParams(entryDiv);
+        const baseTotal = calculateDotEntry(params, mults);
+        const entryTotal = Math.round(baseTotal * mults.finalDmgMult * mults.finalVulnMult);
+        entryDiv.querySelector('.entry-damage-value').innerText = entryTotal;
         totalDamage += entryTotal;
     }
-    document.getElementById('dotTotal').innerText = Math.round(totalDamage);
-    document.getElementById('dotFinalDisplay').innerHTML = `<small>🔥</small> ${Math.round(totalDamage)}`;
-    updatePhysMagicDisplay();
+
+    renderResults({ ...mults, totalDamage });
 }
 function toggleEntryModeControls(entryDiv) {
     let mode = entryDiv.querySelector('.entry-mode').value;
@@ -598,7 +273,7 @@ function createDotEntry(entryId, savedConfig = null) {
     };
     header.appendChild(delBtn);
     entryDiv.appendChild(header);
-    
+
     let modeSelect = document.createElement('select');
     modeSelect.className = 'entry-mode';
     modeSelect.innerHTML = `
@@ -612,7 +287,7 @@ function createDotEntry(entryId, savedConfig = null) {
     modeRow.innerHTML = '<label>伤害模式</label>';
     modeRow.appendChild(modeSelect);
     entryDiv.appendChild(modeRow);
-    
+
     let attrRow = document.createElement('div');
     attrRow.className = 'row attr-row';
     attrRow.innerHTML = '<label>结算属性</label>';
@@ -621,7 +296,7 @@ function createDotEntry(entryId, savedConfig = null) {
     attrSelect.innerHTML = `<option value="phys">物攻</option><option value="magic">魔攻</option>`;
     attrRow.appendChild(attrSelect);
     entryDiv.appendChild(attrRow);
-    
+
     let rateRow = document.createElement('div');
     rateRow.className = 'row';
     rateRow.innerHTML = '<label>结算倍率</label>';
@@ -665,7 +340,7 @@ function createDotEntry(entryId, savedConfig = null) {
     rateControls.appendChild(percentControls);
     rateRow.appendChild(rateControls);
     entryDiv.appendChild(rateRow);
-    
+
     // 生命百分比类专用控件
     let hpRow = document.createElement('div');
     hpRow.className = 'row hp-percent-row';
@@ -683,20 +358,19 @@ function createDotEntry(entryId, savedConfig = null) {
     `;
     hpRow.appendChild(projectSelect);
     entryDiv.appendChild(hpRow);
-    
+
     let infectionRow = document.createElement('div');
     infectionRow.className = 'row infection-row';
     infectionRow.style.display = 'none';
     infectionRow.innerHTML = '<label>感染层数</label>';
     let layersSelect = document.createElement('select');
     layersSelect.className = 'entry-infection-layers';
-    const infectionPercent = [4,8,12,18,26,36,46,58,72];
     for (let i = 1; i <= 9; i++) {
-        layersSelect.innerHTML += `<option value="${i}">${i}层 (${infectionPercent[i-1]}%)</option>`;
+        layersSelect.innerHTML += `<option value="${i}">${i}层 (${INFECTION_PERCENT[i-1]}%)</option>`;
     }
     infectionRow.appendChild(layersSelect);
     entryDiv.appendChild(infectionRow);
-    
+
     let enemyHpRow = document.createElement('div');
     enemyHpRow.className = 'row enemy-hp-row';
     enemyHpRow.style.display = 'none';
@@ -708,7 +382,7 @@ function createDotEntry(entryId, savedConfig = null) {
     enemyHpInput.step = '100';
     enemyHpRow.appendChild(enemyHpInput);
     entryDiv.appendChild(enemyHpRow);
-    
+
     let tickRow = document.createElement('div');
     tickRow.className = 'row';
     tickRow.innerHTML = '<label>结算次数</label>';
@@ -719,13 +393,13 @@ function createDotEntry(entryId, savedConfig = null) {
     tickInput.min = '1';
     tickRow.appendChild(tickInput);
     entryDiv.appendChild(tickRow);
-    
+
     let damageRow = document.createElement('div');
     damageRow.className = 'stat-badge';
     damageRow.style.marginTop = '8px';
     damageRow.innerHTML = `<span class="conversion-label">🔥 总伤害</span> <span class="entry-damage-value">0</span>`;
     entryDiv.appendChild(damageRow);
-    
+
     // 事件绑定
     function toggleControls() {
         let mode = modeSelect.value;
@@ -768,7 +442,7 @@ function createDotEntry(entryId, savedConfig = null) {
     layersSelect.addEventListener('change', () => updateAllDOT());
     enemyHpInput.addEventListener('input', () => updateAllDOT());
     tickInput.addEventListener('input', () => updateAllDOT());
-    
+
     if (savedConfig) {
         modeSelect.value = savedConfig.mode;
         if (savedConfig.mode === 'standard') {
@@ -858,15 +532,19 @@ function getFullConfig() {
     config.magicConvBonus = magicConvParams.bonus;
     config.magicConvHiddenBonus = magicConvParams.hiddenBonus;
     config.dotEntries = getEntriesConfig();
-    config.customDisplayAtkEntries = customDisplayAtkEntries.map(e => ({ name: e.name, percent: e.percent }));
-    config.customActualAtkEntries = customActualAtkEntries.map(e => ({ name: e.name, percent: e.percent }));
-    config.customDotIncEntries = customDotIncEntries.map(e => ({ name: e.name, percent: e.percent }));
-    config.customPenVulnEntries = customPenVulnEntries.map(e => ({ name: e.name, percent: e.percent }));
-    config.customPersistentVulnEntries = customPersistentVulnEntries.map(e => ({ name: e.name, percent: e.percent }));
-    config.customFinalDmgEntries = customFinalDmgEntries.map(e => ({ name: e.name, percent: e.percent }));
-    config.customFinalVulnEntries = customFinalVulnEntries.map(e => ({ name: e.name, percent: e.percent }));
+    config.customDisplayAtkEntries = customDisplayAtkList.entries.map(e => ({ name: e.name, percent: e.percent }));
+    config.customActualAtkEntries = customActualAtkList.entries.map(e => ({ name: e.name, percent: e.percent }));
+    config.customDotIncEntries = customDotIncList.entries.map(e => ({ name: e.name, percent: e.percent }));
+    config.customPenVulnEntries = customPenVulnList.entries.map(e => ({ name: e.name, percent: e.percent }));
+    config.customPersistentVulnEntries = customPersistentVulnList.entries.map(e => ({ name: e.name, percent: e.percent }));
+    config.customFinalDmgEntries = customFinalDmgList.entries.map(e => ({ name: e.name, percent: e.percent }));
+    config.customFinalVulnEntries = customFinalVulnList.entries.map(e => ({ name: e.name, percent: e.percent }));
     config.finalDmgSkill = document.getElementById('finalDmgSkill') ? document.getElementById('finalDmgSkill').value : '0';
     config.finalVulnAura = document.getElementById('finalVulnAura') ? document.getElementById('finalVulnAura').value : '0';
+    config._physConversion = physConversion;
+    config._magicConversion = magicConversion;
+    config._displayAtk = '物攻' + document.getElementById('physDisplay').innerText + ' + 魔攻' + document.getElementById('magicDisplay').innerText;
+    config._totalAtk = '物攻' + document.getElementById('physActual').innerText + ' + 魔攻' + document.getElementById('magicActual').innerText;
     return config;
 }
 function applyFullConfig(config) {
@@ -889,34 +567,13 @@ function applyFullConfig(config) {
     physConversion = computeConversionValue(physConvParams.base, physConvParams.multiplier, physConvParams.bonus, physConvParams.hiddenBonus);
     magicConversion = computeConversionValue(magicConvParams.base, magicConvParams.multiplier, magicConvParams.bonus, magicConvParams.hiddenBonus);
     restoreEntries(config.dotEntries);
-    if (config.customDisplayAtkEntries) {
-        customDisplayAtkEntries = config.customDisplayAtkEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomDisplayAtkEntries();
-    } else { customDisplayAtkEntries = []; renderCustomDisplayAtkEntries(); }
-    if (config.customActualAtkEntries) {
-        customActualAtkEntries = config.customActualAtkEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomActualAtkEntries();
-    } else { customActualAtkEntries = []; renderCustomActualAtkEntries(); }
-    if (config.customDotIncEntries) {
-        customDotIncEntries = config.customDotIncEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomDotIncEntries();
-    } else { customDotIncEntries = []; renderCustomDotIncEntries(); }
-    if (config.customPenVulnEntries) {
-        customPenVulnEntries = config.customPenVulnEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomPenVulnEntries();
-    } else { customPenVulnEntries = []; renderCustomPenVulnEntries(); }
-    if (config.customPersistentVulnEntries) {
-        customPersistentVulnEntries = config.customPersistentVulnEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomPersistentVulnEntries();
-    } else { customPersistentVulnEntries = []; renderCustomPersistentVulnEntries(); }
-    if (config.customFinalDmgEntries) {
-        customFinalDmgEntries = config.customFinalDmgEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomFinalDmgEntries();
-    } else { customFinalDmgEntries = []; renderCustomFinalDmgEntries(); }
-    if (config.customFinalVulnEntries) {
-        customFinalVulnEntries = config.customFinalVulnEntries.map(e => ({ name: e.name, percent: e.percent }));
-        renderCustomFinalVulnEntries();
-    } else { customFinalVulnEntries = []; renderCustomFinalVulnEntries(); }
+    if (config.customDisplayAtkEntries) customDisplayAtkList.setFromSaved(config.customDisplayAtkEntries); else customDisplayAtkList.clear();
+    if (config.customActualAtkEntries) customActualAtkList.setFromSaved(config.customActualAtkEntries); else customActualAtkList.clear();
+    if (config.customDotIncEntries) customDotIncList.setFromSaved(config.customDotIncEntries); else customDotIncList.clear();
+    if (config.customPenVulnEntries) customPenVulnList.setFromSaved(config.customPenVulnEntries); else customPenVulnList.clear();
+    if (config.customPersistentVulnEntries) customPersistentVulnList.setFromSaved(config.customPersistentVulnEntries); else customPersistentVulnList.clear();
+    if (config.customFinalDmgEntries) customFinalDmgList.setFromSaved(config.customFinalDmgEntries); else customFinalDmgList.clear();
+    if (config.customFinalVulnEntries) customFinalVulnList.setFromSaved(config.customFinalVulnEntries); else customFinalVulnList.clear();
     if (config.finalDmgSkill !== undefined && document.getElementById('finalDmgSkill')) document.getElementById('finalDmgSkill').value = config.finalDmgSkill;
     if (config.finalVulnAura !== undefined && document.getElementById('finalVulnAura')) document.getElementById('finalVulnAura').value = config.finalVulnAura;
     updatePhysMagicDisplay();
@@ -950,13 +607,13 @@ function resetAll() {
     physConvParams = { base:0, multiplier:0, bonus:0, hiddenBonus:0 };
     magicConvParams = { base:0, multiplier:0, bonus:0, hiddenBonus:0 };
     physConversion = 0; magicConversion = 0;
-    customDisplayAtkEntries = []; renderCustomDisplayAtkEntries();
-    customActualAtkEntries = []; renderCustomActualAtkEntries();
-    customDotIncEntries = []; renderCustomDotIncEntries();
-    customPenVulnEntries = []; renderCustomPenVulnEntries();
-    customPersistentVulnEntries = []; renderCustomPersistentVulnEntries();
-    customFinalDmgEntries = []; renderCustomFinalDmgEntries();
-    customFinalVulnEntries = []; renderCustomFinalVulnEntries();
+    customDisplayAtkList.clear();
+    customActualAtkList.clear();
+    customDotIncList.clear();
+    customPenVulnList.clear();
+    customPersistentVulnList.clear();
+    customFinalDmgList.clear();
+    customFinalVulnList.clear();
     restoreEntries(null);
     updatePhysMagicDisplay();
     updateAllDOT();
@@ -977,400 +634,126 @@ resetAll();
 
 document.addEventListener('DOMContentLoaded', () => {
     const addDisplayBtn = document.getElementById('addCustomDisplayAtkBtn');
-    if (addDisplayBtn) addDisplayBtn.addEventListener('click', addCustomDisplayAtkEntry);
+    if (addDisplayBtn) addDisplayBtn.addEventListener('click', () => customDisplayAtkList.add());
     const addActualBtn = document.getElementById('addCustomActualAtkBtn');
-    if (addActualBtn) addActualBtn.addEventListener('click', addCustomActualAtkEntry);
+    if (addActualBtn) addActualBtn.addEventListener('click', () => customActualAtkList.add());
     const addDotIncBtn = document.getElementById('addCustomDotIncBtn');
-    if (addDotIncBtn) addDotIncBtn.addEventListener('click', addCustomDotIncEntry);
+    if (addDotIncBtn) addDotIncBtn.addEventListener('click', () => customDotIncList.add());
     const addPenVulnBtn = document.getElementById('addCustomPenVulnBtn');
-    if (addPenVulnBtn) addPenVulnBtn.addEventListener('click', addCustomPenVulnEntry);
+    if (addPenVulnBtn) addPenVulnBtn.addEventListener('click', () => customPenVulnList.add());
     const addPersistentBtn = document.getElementById('addCustomPersistentVulnBtn');
-    if (addPersistentBtn) addPersistentBtn.addEventListener('click', addCustomPersistentVulnEntry);
+    if (addPersistentBtn) addPersistentBtn.addEventListener('click', () => customPersistentVulnList.add());
     const addFinalDmgBtn = document.getElementById('addCustomFinalDmgBtn');
-    if (addFinalDmgBtn) addFinalDmgBtn.addEventListener('click', addCustomFinalDmgEntry);
+    if (addFinalDmgBtn) addFinalDmgBtn.addEventListener('click', () => customFinalDmgList.add());
     const addFinalVulnBtn = document.getElementById('addCustomFinalVulnBtn');
-    if (addFinalVulnBtn) addFinalVulnBtn.addEventListener('click', addCustomFinalVulnEntry);
+    if (addFinalVulnBtn) addFinalVulnBtn.addEventListener('click', () => customFinalVulnList.add());
 });
 
 // ================= 记录管理模块 =================
-(function() {
-    let records = [];
-    const STORAGE_KEY = 'DotDamageRecordsV6';
+const dotFieldMeta = {
+    physBase: { name: "基础物攻", zone: "⚔️ 攻击区间" },
+    magicBase: { name: "基础魔攻", zone: "⚔️ 攻击区间" },
+    atkBuff: { name: "攻击BUFF", zone: "⚔️ 攻击区间", unit: "%" },
+    flag: { name: "战旗", zone: "⚔️ 攻击区间", unit: "%" },
+    swordScepter: { name: "剑杖刻印", zone: "⚔️ 攻击区间", unit: "%" },
+    basicAura: { name: "基础光环", zone: "⚔️ 攻击区间", unit: "%" },
+    coordAttack: { name: "协攻", zone: "⚔️ 攻击区间", unit: "%" },
+    _physConversion: { name: "物攻转化值", zone: "⚔️ 攻击区间", unit: "" },
+    _magicConversion: { name: "魔攻转化值", zone: "⚔️ 攻击区间", unit: "" },
+    _displayAtk: { name: "显示攻击力", zone: "⚔️ 攻击区间", unit: "" },
+    _totalAtk: { name: "最终攻击力", zone: "⚔️ 攻击区间", unit: "" },
+    incBuff: { name: "持续伤害buff", zone: "📈 持续伤害增伤", unit: "%" },
+    yujieUlt: { name: "羽姐大招", zone: "📈 持续伤害增伤", unit: "%" },
+    yujiePersonality: { name: "羽姐5星个性", zone: "📈 持续伤害增伤", unit: "%" },
+    hashaAura: { name: "大哈沙光环", zone: "📈 持续伤害增伤", unit: "%" },
+    puppet: { name: "傀儡", zone: "🔻 穿透易伤", unit: "%" },
+    nightmare: { name: "梦魇", zone: "🔻 穿透易伤", unit: "%" },
+    penVuln: { name: "穿透易伤", zone: "🔻 穿透易伤", unit: "%" },
+    immunity: { name: "免疫减免", zone: "🔻 穿透易伤", unit: "" },
+    momoAura: { name: "茉茉个性光环", zone: "🔥 持续伤害易伤", unit: "%" },
+    boqiAura: { name: "波奇个性光环", zone: "🔥 持续伤害易伤", unit: "%" },
+    charm: { name: "魅惑", zone: "🔥 持续伤害易伤", unit: "%" },
+    woundLayers: { name: "伤口层数", zone: "🩸 伤口", unit: "层" },
+    profession: { name: "职业天赋", zone: "🌐 全局设置" },
+    tarot: { name: "塔罗牌", zone: "🌐 全局设置" },
+    finalDmgSkill: { name: "无视守护·寒境", zone: "✨ 最终增伤区间", unit: "%" },
+    finalVulnAura: { name: "塞娜光环", zone: "🎯 最终易伤区间", unit: "%" }
+};
 
-    function loadRecords() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-            try { records = JSON.parse(raw); if (!Array.isArray(records)) records = []; } catch(e) { records = []; }
-        } else { records = []; }
-    }
-    function saveRecords() { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
-    async function addRecord(name, config, damage) {
-        records.unshift({ id: Date.now(), name: name.trim(), config, damage, date: new Date().toISOString() });
-        saveRecords();
-    }
-    async function deleteRecord(id) { records = records.filter(r => r.id != id); saveRecords(); }
-    async function clearAll() {
-        if (confirm("确定清空所有记录吗？")) { records = []; saveRecords(); return true; }
-        return false;
-    }
+function isFieldEmptyValue(key, value) {
+    if (value === undefined || value === null) return true;
+    const str = value.toString().trim();
+    if (str === '' || str === '0' || str === 'none' || str === '无') return true;
+    const num = parseFloat(str);
+    if (!isNaN(num) && num === 0) return true;
+    return false;
+}
 
-    const fieldMeta = {
-        physBase: { name: "基础物攻", zone: "⚔️ 攻击区间" },
-        magicBase: { name: "基础魔攻", zone: "⚔️ 攻击区间" },
-        atkBuff: { name: "攻击BUFF", zone: "⚔️ 攻击区间", unit: "%" },
-        flag: { name: "战旗", zone: "⚔️ 攻击区间", unit: "%" },
-        swordScepter: { name: "剑杖刻印", zone: "⚔️ 攻击区间", unit: "%" },
-        basicAura: { name: "基础光环", zone: "⚔️ 攻击区间", unit: "%" },
-        coordAttack: { name: "协攻", zone: "⚔️ 攻击区间", unit: "%" },
-        incBuff: { name: "持续伤害buff", zone: "📈 持续伤害增伤", unit: "%" },
-        yujieUlt: { name: "羽姐大招", zone: "📈 持续伤害增伤", unit: "%" },
-        yujiePersonality: { name: "羽姐5星个性", zone: "📈 持续伤害增伤", unit: "%" },
-        hashaAura: { name: "大哈沙光环", zone: "📈 持续伤害增伤", unit: "%" },
-        puppet: { name: "傀儡", zone: "🔻 穿透易伤", unit: "%" },
-        nightmare: { name: "梦魇", zone: "🔻 穿透易伤", unit: "%" },
-        penVuln: { name: "穿透易伤", zone: "🔻 穿透易伤", unit: "%" },
-        immunity: { name: "免疫减免", zone: "🔻 穿透易伤", unit: "" },
-        momoAura: { name: "茉茉个性光环", zone: "🔥 持续伤害易伤", unit: "%" },
-        boqiAura: { name: "波奇个性光环", zone: "🔥 持续伤害易伤", unit: "%" },
-        charm: { name: "魅惑", zone: "🔥 持续伤害易伤", unit: "%" },
-        woundLayers: { name: "伤口层数", zone: "🩸 伤口", unit: "层" },
-        profession: { name: "职业天赋", zone: "🌐 全局设置" },
-        tarot: { name: "塔罗牌", zone: "🌐 全局设置" },
-        finalDmgSkill: { name: "无视守护·寒境", zone: "✨ 最终增伤区间", unit: "%" },
-        finalVulnAura: { name: "塞娜光环", zone: "🎯 最终易伤区间", unit: "%" }
-    };
+const DOT_SELECT_LABELS = {
+    atkBuff:           { '0':'无', '10':'攻击1', '20':'攻击2', '30':'攻击3', '40':'攻击4' },
+    flag:              { '0':'无', '20':'有战旗' },
+    swordScepter:      { '0':'不触发', '4':'一步', '8':'两步', '12':'三步以上' },
+    basicAura:         { '0':'无', '10':'有' },
+    coordAttack:       { '0':'无', '5':'协攻1', '10':'协攻2', '15':'协攻3' },
+    incBuff:           { '0':'无', '10':'持续伤害1' },
+    yujieUlt:          { '0':'无', '15':'有' },
+    yujiePersonality:  { '0':'无', '25':'有' },
+    hashaAura:         { '0':'无', '5':'有', '15':'有解放' },
+    puppet:            { '0':'无', '15':'有' },
+    nightmare:         { '0':'无', '5':'有' },
+    penVuln:           { '0':'无', '10':'易伤1', '20':'易伤2' },
+    momoAura:          { '0':'无' },
+    boqiAura:          { '0':'无' },
+    charm:             { '0':'无', '30':'有' },
+    immunity:          { '0':'无' },
+};
 
-    function isFieldEmptyValue(key, value) {
-        if (value === undefined || value === null) return true;
-        const str = value.toString().trim();
-        if (str === '' || str === '0' || str === 'none' || str === '无') return true;
-        const num = parseFloat(str);
-        if (!isNaN(num) && num === 0) return true;
-        return false;
+function formatFieldValue(key, value) {
+    if (value === undefined || value === null) return '—';
+    let val = value.toString();
+    if (key === 'woundLayers') {
+        const layers = parseInt(val);
+        if (isNaN(layers) || layers === 0) return '0层';
+        const percent = (Math.pow(1.12, layers) - 1) * 100;
+        return `${layers}层 (+${percent.toFixed(2)}%)`;
     }
+    if (key === 'profession') return getProfessionName(val);
+    if (key === 'tarot') return getTarotName(val);
+    if (key === 'immunity') return getImmunityName(val);
+    if (key === 'finalDmgSkill') return FINAL_DMG_SKILL_DOT[val] || val;
+    if (key === 'finalVulnAura') return FINAL_VULN_AURA[val] || val;
+    const label = DOT_SELECT_LABELS[key]?.[val];
+    const unit = dotFieldMeta[key]?.unit || '';
+    if (label && label !== val) return `${label} (${val}${unit})`;
+    return val + (unit ? unit : '');
+}
 
-    function formatFieldValue(key, value) {
-        if (value === undefined || value === null) return '—';
-        let val = value.toString();
-        if (key === 'woundLayers') {
-            const layers = parseInt(val);
-            if (isNaN(layers) || layers === 0) return '0层';
-            const percent = (Math.pow(1.12, layers) - 1) * 100;
-            return `${layers}层 (+${percent.toFixed(2)}%)`;
-        }
-        if (key === 'profession') return val === 'none' ? '无' : (val === 'watcher' ? '守望者' : val);
-        if (key === 'tarot') return val === 'none' ? '无' : (val === 'hangman' ? '倒吊人' : val);
-        if (key === 'immunity') {
-            if (val === '0') return '无';
-            if (val === '0.5') return '减免50%';
-            if (val === '0.8') return '减免80%';
-            if (val === '0.95') return '减免95%';
-            return val;
-        }
-        if (key === 'finalDmgSkill') {
-            return val === '0' ? '无' : (val === '10' ? '有 (10%)' : val + '%');
-        }
-        if (key === 'finalVulnAura') {
-            return val === '0' ? '无' : (val === '10' ? '有 (10%)' : val + '%');
-        }
-        const unit = fieldMeta[key]?.unit || '';
-        return val + (unit ? unit : '');
-    }
-
-    function formatDotEntry(entry) {
-        if (entry.mode === 'standard') {
-            let rateStr = entry.fixedValue === 'custom' ? `${entry.customPercent}%` : 
-                (entry.fixedValue === '0.15' ? '次级冻伤(15%)' : 
-                 (entry.fixedValue === '0.50' ? '冻伤(50%)' : 
-                  (entry.fixedValue === '0.25' ? '点燃(25%)' : `${parseFloat(entry.fixedValue)*100}%`)));
-            return `标准DOT [${rateStr}] ×${entry.tickCount}次`;
-        } else if (entry.mode === 'lifeLoss') {
-            let attrName = entry.attr === 'phys' ? '物攻' : '魔攻';
-            return `生命流失 [${attrName} ${entry.percent}%] ×${entry.tickCount}次`;
-        } else if (entry.mode === 'scarTear') {
-            let attrName = entry.attr === 'phys' ? '物攻' : '魔攻';
-            return `伤痕撕裂 [${attrName} ${entry.percent}%] ×${entry.tickCount}次`;
-        } else if (entry.mode === 'hpPercent') {
-            const projectMap = { infection:'感染', burn:'灼烧', stigma:'圣痕', erosion:'蚀炎', darkfire:'冥火', ancestor:'先祖之力' };
-            let projectName = projectMap[entry.project] || entry.project;
-            let detail = '';
-            if (entry.project === 'infection') detail = ` ${entry.infectionLayers}层`;
-            return `生命百分比类 [${projectName}${detail}] ×${entry.tickCount}次 (HP:${entry.enemyHp})`;
-        }
-        return '';
-    }
-
-    function getGroupedDetails(config) {
-        const zoneOrder = ['⚔️ 攻击区间', '📈 持续伤害增伤', '🔻 穿透易伤', '🔥 持续伤害易伤', '🩸 伤口', '✨ 最终增伤区间', '🎯 最终易伤区间', '🌐 全局设置', '📊 DOT条目'];
-        const groups = {};
-        for (const [key, value] of Object.entries(config)) {
-            if (key === 'dotEntries') continue;
-            if (key.startsWith('custom')) continue;
-            const meta = fieldMeta[key];
-            if (!meta) continue;
-            if (isFieldEmptyValue(key, value)) continue;
-            if (!groups[meta.zone]) groups[meta.zone] = [];
-            groups[meta.zone].push(`<div class="config-item"><strong>${meta.name}</strong>：${formatFieldValue(key, value)}</div>`);
-        }
-        const customZones = [
-            { entries: config.customDisplayAtkEntries, zone: '⚔️ 攻击区间 (自定义显示)' },
-            { entries: config.customActualAtkEntries, zone: '⚔️ 攻击区间 (自定义实际)' },
-            { entries: config.customDotIncEntries, zone: '📈 持续伤害增伤 (自定义)' },
-            { entries: config.customPenVulnEntries, zone: '🔻 穿透易伤 (自定义)' },
-            { entries: config.customPersistentVulnEntries, zone: '🔥 持续伤害易伤 (自定义)' },
-            { entries: config.customFinalDmgEntries, zone: '✨ 最终增伤区间 (自定义)' },
-            { entries: config.customFinalVulnEntries, zone: '🎯 最终易伤区间 (自定义)' }
-        ];
-        for (const cz of customZones) {
-            if (cz.entries && cz.entries.length) {
-                if (!groups[cz.zone]) groups[cz.zone] = [];
-                cz.entries.forEach(entry => {
-                    groups[cz.zone].push(`<div class="config-item"><strong>${escapeHtml(entry.name)}</strong>：${entry.percent}%</div>`);
-                });
-            }
-        }
-        if (config.dotEntries && config.dotEntries.length) {
-            groups['📊 DOT条目'] = [];
-            for (let i = 0; i < config.dotEntries.length; i++) {
-                groups['📊 DOT条目'].push(`<div class="config-item"><strong>条目 ${i+1}</strong>：${formatDotEntry(config.dotEntries[i])}</div>`);
-            }
-        }
-        let html = '';
-        for (const zone of zoneOrder) {
-            if (groups[zone] && groups[zone].length) {
-                html += `<div class="zone-title">${zone}</div><div class="config-grid">${groups[zone].join('')}</div>`;
-            }
-        }
-        return html || '<div class="config-item">无有效配置项</div>';
-    }
-
-    function renderMultiCompare(recordsList) {
-        if (!recordsList || recordsList.length < 2) return;
-        const zoneOrder = ['⚔️ 攻击区间', '📈 持续伤害增伤', '🔻 穿透易伤', '🔥 持续伤害易伤', '🩸 伤口', '✨ 最终增伤区间', '🎯 最终易伤区间', '🌐 全局设置'];
-        const zoneMap = {};
-        for (const [key, meta] of Object.entries(fieldMeta)) {
-            if (!zoneMap[meta.zone]) zoneMap[meta.zone] = [];
-            zoneMap[meta.zone].push(key);
-        }
-        let fieldsToShow = [];
-        for (const zone of zoneOrder) {
-            const fields = zoneMap[zone] || [];
-            for (const field of fields) {
-                const values = recordsList.map(rec => rec.config[field] !== undefined ? rec.config[field] : '');
-                const allEmpty = values.every(v => isFieldEmptyValue(field, v));
-                if (!allEmpty) fieldsToShow.push({ field, zone, values });
-            }
-        }
-        const customTypes = [
-            { key: 'customDisplayAtkEntries', zone: '⚔️ 攻击区间', title: '显示攻击自定义' },
-            { key: 'customActualAtkEntries', zone: '⚔️ 攻击区间', title: '实际攻击自定义' },
-            { key: 'customDotIncEntries', zone: '📈 持续伤害增伤', title: '持续增伤自定义' },
-            { key: 'customPenVulnEntries', zone: '🔻 穿透易伤', title: '穿透易伤自定义' },
-            { key: 'customPersistentVulnEntries', zone: '🔥 持续伤害易伤', title: '持续易伤自定义' },
-            { key: 'customFinalDmgEntries', zone: '✨ 最终增伤区间', title: '最终增伤自定义' },
-            { key: 'customFinalVulnEntries', zone: '🎯 最终易伤区间', title: '最终易伤自定义' }
-        ];
-        for (const ct of customTypes) {
-            let allNames = new Set();
-            for (const rec of recordsList) {
-                const entries = rec.config[ct.key] || [];
-                entries.forEach(e => allNames.add(e.name));
-            }
-            const sortedNames = Array.from(allNames).sort();
-            for (const name of sortedNames) {
-                const values = [];
-                for (const rec of recordsList) {
-                    const entries = rec.config[ct.key] || [];
-                    const entry = entries.find(e => e.name === name);
-                    values.push(entry ? entry.percent : 0);
-                }
-                const allZero = values.every(v => v === 0);
-                if (allZero) continue;
-                fieldsToShow.push({
-                    field: `custom_${ct.key}_${name}`,
-                    zone: ct.zone,
-                    values: values,
-                    isCustom: true,
-                    customName: name
-                });
-            }
-        }
-        fieldsToShow.sort((a, b) => zoneOrder.indexOf(a.zone) - zoneOrder.indexOf(b.zone));
-        let html = '<div class="compare-table-wrapper"><table class="compare-table"><thead><th class="field-name">字段</th>';
-        for (const rec of recordsList) html += `<th>${escapeHtml(rec.name)}</th>`;
-        html += '</thead><tbody>';
-        let currentZone = '';
-        for (const item of fieldsToShow) {
-            if (item.zone !== currentZone) {
-                if (currentZone) html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">' + item.zone + '</td></tr>';
-                currentZone = item.zone;
-            }
-            let displayName;
-            if (item.isCustom) {
-                displayName = item.customName;
-            } else {
-                const meta = fieldMeta[item.field];
-                if (!meta) continue;
-                displayName = meta.name;
-            }
-            const allSame = item.values.every(v => v === item.values[0]);
-            html += `<tr><td class="field-name">${escapeHtml(displayName)}</td>`;
-            for (let i = 0; i < recordsList.length; i++) {
-                let displayVal;
-                if (item.isCustom) {
-                    displayVal = item.values[i] + '%';
-                } else {
-                    displayVal = formatFieldValue(item.field, item.values[i]);
-                }
-                const cls = allSame ? '' : 'diff-highlight';
-                html += `<td class="${cls}">${escapeHtml(displayVal)}</td>`;
-            }
-            html += '</tr>';
-        }
-        html += '<tr class="zone-header"><td colspan="' + (recordsList.length + 1) + '">📊 伤害对比</td></tr>';
-        html += '<tr><td class="field-name">🔥 DOT总伤害</td>';
-        for (const rec of recordsList) {
-            html += `<td>${escapeHtml(String(rec.damage))}</td>`;
-        }
-        html += '</table></tbody></table></div>';
-        document.getElementById('compareArea').innerHTML = html;
-        const existingBtnDiv = document.getElementById('screenshotCompareBtn')?.parentElement;
-        if (existingBtnDiv) existingBtnDiv.remove();
-        const btnDiv = document.createElement('div');
-        btnDiv.className = 'screenshot-btn-container';
-        btnDiv.style.textAlign = 'center';
-        btnDiv.style.marginBottom = '12px';
-        const screenshotBtn = document.createElement('button');
-        screenshotBtn.id = 'screenshotCompareBtn';
-        screenshotBtn.className = 'screenshot-btn';
-        screenshotBtn.innerHTML = '📸 截图对比';
-        screenshotBtn.onclick = async () => {
-            const wrapper = document.querySelector('#compareArea .compare-table-wrapper');
-            if (!wrapper) return;
-            try {
-                await loadHtml2Canvas();
-                const clone = wrapper.cloneNode(true);
-                clone.style.position = 'absolute';
-                clone.style.left = '-9999px';
-                clone.style.top = '0';
-                clone.style.width = 'auto';
-                clone.style.maxWidth = 'none';
-                clone.style.overflow = 'visible';
-                document.body.appendChild(clone);
-                showLoading('正在生成截图...');
-                await new Promise(r => setTimeout(r, 100));
-                const canvas = await html2canvas(clone, { scale: 2, backgroundColor: '#ffffff' });
-                const link = document.createElement('a');
-                const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
-                link.download = `DOT对比_${timestamp}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-                document.body.removeChild(clone);
-            } catch (err) {
-                showScreenshotError('截图失败：' + (err.message || '未知错误'));
-            } finally {
-                hideLoading();
-            }
-        };
-        btnDiv.appendChild(screenshotBtn);
-        document.getElementById('compareArea').insertBefore(btnDiv, document.getElementById('compareArea').firstChild);
-    }
-
-    function renderRecordsUI() {
-        const area = document.getElementById('recordsListArea');
-        if (!area) return;
-        if (records.length === 0) {
-            area.innerHTML = '<div style="padding:20px;text-align:center">✨ 暂无记录，请在计算器中点击“记录结果”保存配置。</div>';
-            document.getElementById('compareArea').innerHTML = '';
-            return;
-        }
-        let html = '';
-        records.forEach(rec => {
-            html += `<div class="record-card" data-id="${rec.id}">
-                <div class="record-header">
-                    <div><input type="checkbox" class="compare-check" value="${rec.id}"> <span class="record-name">📌 ${escapeHtml(rec.name)}</span></div>
-                    <div class="record-damage">🔥 ${rec.damage}</div>
-                    <div class="record-actions">
-                        <button class="small-btn view-detail" data-id="${rec.id}">🔍 详情</button>
-                        <button class="small-btn apply-record" data-id="${rec.id}">📥 填入计算器</button>
-                        <button class="small-btn delete-record" data-id="${rec.id}">🗑️ 删除</button>
-                    </div>
-                </div>
-                <div class="detail-panel" id="detail-${rec.id}" style="display:none;"></div>
-            </div>`;
-        });
-        area.innerHTML = html;
-        document.querySelectorAll('.view-detail').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = parseInt(btn.dataset.id);
-                const rec = records.find(r => r.id === id);
-                if (!rec) return;
-                const panel = document.getElementById(`detail-${id}`);
-                if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
-                panel.innerHTML = getGroupedDetails(rec.config) + `<div class="stat-badge" style="margin-top:12px;">🔥 DOT总伤害: ${rec.damage}</div>`;
-                panel.style.display = 'block';
-            });
-        });
-        document.querySelectorAll('.apply-record').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const id = parseInt(btn.dataset.id);
-                const rec = records.find(r => r.id === id);
-                if (rec) { applyFullConfig(rec.config); document.getElementById('recordModal').classList.remove('active'); }
-            });
-        });
-        document.querySelectorAll('.delete-record').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = parseInt(btn.dataset.id);
-                await deleteRecord(id);
-                renderRecordsUI();
-                updateCompareSelection();
-            });
-        });
-        const checks = document.querySelectorAll('.compare-check');
-        checks.forEach(ch => {
-            ch.removeEventListener('change', updateCompareSelection);
-            ch.addEventListener('change', updateCompareSelection);
-        });
-        updateCompareSelection();
-    }
-
-    function updateCompareSelection() {
-        const checks = document.querySelectorAll('.compare-check');
-        const selected = [];
-        checks.forEach(ch => { if (ch.checked) selected.push(parseInt(ch.value)); });
-        const compareArea = document.getElementById('compareArea');
-        if (selected.length >= 2) {
-            const selectedRecords = selected.map(id => records.find(r => r.id === id)).filter(r => r);
-            if (selectedRecords.length) renderMultiCompare(selectedRecords);
-            else compareArea.innerHTML = '';
-        } else {
-            compareArea.innerHTML = selected.length === 1 ? '<div class="stat-badge">📊 至少选择两条记录进行对比</div>' : '<div class="stat-badge">📊 勾选记录可进行对比（支持多条）</div>';
-        }
-    }
-
-    async function handleRecord() {
-        let name = prompt('为本次记录命名 (最多20字)', 'DOT配置 ' + new Date().toLocaleTimeString());
-        if (!name) return;
-        name = name.trim();
-        if (name === '') { alert('记录名称不能为空'); return; }
-        if (name.length > 20) name = name.slice(0,20);
-        const existing = records.find(r => r.name === name);
-        if (existing) {
-            if (!confirm(`记录“${name}”已存在，是否覆盖？`)) return;
-            await deleteRecord(existing.id);
-        }
-        const config = getFullConfig();
-        const damage = parseInt(document.getElementById('dotFinalDisplay').innerText.replace(/[^0-9-]/g, ''));
-        await addRecord(name, config, damage);
-        alert(`已记录“${name}”`);
-    }
-
-    document.getElementById('recordBtn').onclick = handleRecord;
-    document.getElementById('queryBtn').onclick = () => { loadRecords(); renderRecordsUI(); document.getElementById('recordModal').classList.add('active'); };
-    document.getElementById('clearBtn').onclick = async () => { if (await clearAll()) { alert('所有记录已清空'); if (document.getElementById('recordModal').classList.contains('active')) renderRecordsUI(); } };
-    document.getElementById('closeModalBtn').onclick = () => document.getElementById('recordModal').classList.remove('active');
-    document.getElementById('recordModal').addEventListener('click', (e) => { if (e.target === document.getElementById('recordModal')) document.getElementById('recordModal').classList.remove('active'); });
-    loadRecords();
-})();
+const dotRecordManager = createRecordManager({
+    storageKey: 'DotDamageRecordsV6',
+    recordNamePrefix: 'DOT配置',
+    getDamageDisplay: (rec) => `🔥 ${rec.damage}`,
+    getDamageShort: (rec) => String(rec.damage || ''),
+    getCurrentConfig: getFullConfig,
+    applyConfig: (rec) => applyFullConfig(rec.config),
+    getDamageSnapshot: () => parseInt(document.getElementById('dotFinalDisplay').innerText.replace(/[^0-9-]/g, '')),
+    fieldMeta: dotFieldMeta,
+    formatFieldValue,
+    isFieldEmptyValue,
+    zoneOrder: ['⚔️ 攻击区间', '📈 持续伤害增伤', '🔻 穿透易伤', '🔥 持续伤害易伤', '🩸 伤口', '✨ 最终增伤区间', '🎯 最终易伤区间', '🌐 全局设置'],
+    compareCustomTypes: [
+        { key: 'customDisplayAtkEntries', zone: '⚔️ 攻击区间' },
+        { key: 'customActualAtkEntries', zone: '⚔️ 攻击区间' },
+        { key: 'customDotIncEntries', zone: '📈 持续伤害增伤' },
+        { key: 'customPenVulnEntries', zone: '🔻 穿透易伤' },
+        { key: 'customPersistentVulnEntries', zone: '🔥 持续伤害易伤' },
+        { key: 'customFinalDmgEntries', zone: '✨ 最终增伤区间' },
+        { key: 'customFinalVulnEntries', zone: '🎯 最终易伤区间' },
+    ],
+    compareDamageLabel: '🔥 DOT总伤害',
+    screenshotFileName: 'DOT对比',
+    saveBtnId: 'recordBtn',
+    queryBtnId: 'queryBtn',
+    clearBtnId: 'clearBtn',
+});
 
 preloadScreenshot();
