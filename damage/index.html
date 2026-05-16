@@ -11,7 +11,7 @@
 <div class="calculator-card">
     <h1>
         ⚔️ 铃兰之剑 · 伤害计算
-        <span>V1.4.0</span>
+        <span id="versionDisplay"></span>
         <span class="author-badge">by 阿呆</span>
         <a href="../index.html" style="background: #2d4059; color: #ffd966; text-decoration: none; padding: 5px 14px; border-radius: 40px; font-size: 0.9rem; font-weight: 500; margin-left: auto;">← 返回</a>
     </h1>
@@ -155,6 +155,22 @@
                     <option value="10">有 (10%)</option>
                 </select></div>
             </div>
+            <div class="row">
+                <div><label>粉碎</label><select id="finalVulnSmash">
+                    <option value="0">无 (0%)</option>
+                    <option value="3">1层 (3%)</option>
+                    <option value="6">2层 (6%)</option>
+                    <option value="9">3层 (9%)</option>
+                    <option value="12">4层 (12%)</option>
+                    <option value="15">5层 (15%)</option>
+                    <option value="18">6层 (18%)</option>
+                    <option value="21">7层 (21%)</option>
+                    <option value="24">8层 (24%)</option>
+                    <option value="27">9层 (27%)</option>
+                    <option value="30">10层 (30%)</option>
+                </select></div>
+                <div></div>
+            </div>
             <div id="customFinalVulnContainer" style="margin-bottom: 10px;"></div>
             <button id="addCustomFinalVulnBtn" class="btn action-btn" style="width:100%; margin-bottom: 10px;">➕ 添加最终易伤自定义条目</button>
             <div class="stat-badge">最终易伤乘数 = <span id="statFinalVulnMult">1.00x</span></div>
@@ -227,11 +243,12 @@
 <div id="recordModal" class="modal-mask">
     <div class="modal-container">
         <div class="modal-header">
-            <span>📚 记录库 (无上限)</span>
+            <span id="modalTitle">📚 直接伤害记录库</span>
             <button class="close-modal" id="closeModalBtn">✖ 关闭</button>
         </div>
         <div id="recordsListArea">加载中...</div>
         <div id="compareArea" style="margin-top: 20px;"></div>
+        <div class="modal-footer">💡 版本不符可填入计算器重新记录</div>
     </div>
 </div>
 

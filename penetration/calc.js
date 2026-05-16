@@ -115,7 +115,7 @@ export function calculatePenetration(inputs) {
     const finalMult = 1 + (inputs.emperorCold + finalDmgSum) / 100;
 
     // ---- 最终易伤（乘算） ----
-    let finalVulnMult = (1 + inputs.finalVulnAura / 100);
+    let finalVulnMult = (1 + inputs.finalVulnAura / 100) * (1 + inputs.finalVulnSmash / 100);
     for (const val of inputs.customFinalVulnEntries) {
         finalVulnMult *= (1 + val / 100);
     }

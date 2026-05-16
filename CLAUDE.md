@@ -88,3 +88,13 @@ collectInputs()  →  calc.js/calculateXxx()  →  renderResults()
 - 无任何外部依赖（运行时加载 html2canvas 仅用于截图功能）
 - 默认 base attack 3000，base def 1500，skill multiplier 100%
 - 代码中无测试、无类型检查、无 lint
+- **选项布局规则**：每个 `<div class="row">` 内必须恰好 2 个 `<div>` 子元素（形成两列网格）。单选时另一个 `<div>` 留空 `<div></div>`
+- **版本号自动更新**：`common/version.js` 是唯一版本来源。每次改动代码后自动递增，规则如下：
+
+  | 变化类型 | 更新操作 |
+  |---|---|
+  | 修 bug、UI 微调、文案错误、**新增选项字段**、选项值调整 | patch +1 |
+  | 新增计算器、架构重构、破坏性变更 | minor +1（patch 归零） |
+  | 伤害公式重写、大规模重构 | major +1（minor 和 patch 归零） |
+
+  patch 达到 10 时自动进位：patch 归零，minor +1

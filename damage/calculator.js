@@ -2,9 +2,10 @@
 import { preloadScreenshot, loadHtml2Canvas, showLoading, hideLoading, showScreenshotError } from '../common/screenshot.js';
 import { computeConversionValue } from '../common/conversion.js';
 import { CustomEntryList } from '../common/utils.js';
-import { getTarotName, getProfessionName, getWeaknessName } from '../common/gameData.js';
+import { getTarotName, getProfessionName, getWeaknessName, FINAL_VULN_SMASH } from '../common/gameData.js';
 import { calculateDamage } from './calc.js';
 import { createRecordManager } from '../common/recordManager.js';
+import { APP_VERSION, APP_VERSION_DISPLAY } from '../common/version.js';
 
 // ================= 自定义条目管理器 =================
 const customDisplayAtkList = new CustomEntryList({ containerId: 'customDisplayAtkContainer', onUpdate: updateAll });
@@ -136,6 +137,7 @@ const statFinalMult = document.getElementById('statFinalMult');
 // 新增最终易伤相关元素
 const finalVulnSkillSelect = document.getElementById('finalVulnSkill');
 const finalVulnAuraSelect = document.getElementById('finalVulnAura');
+const finalVulnSmashSelect = document.getElementById('finalVulnSmash');
 const statFinalVulnMult = document.getElementById('statFinalVulnMult');
 
 
@@ -167,6 +169,7 @@ function collectInputs() {
         finalDmgSkill: parseFloat(finalDmgSkillSelect.value) || 0,
         finalVulnSkill: parseFloat(finalVulnSkillSelect.value) || 0,
         finalVulnAura: parseFloat(finalVulnAuraSelect.value) || 0,
+        finalVulnSmash: parseFloat(finalVulnSmashSelect.value) || 0,
         takenBuff: parseFloat(takenBuffSelect.value) || 0,
         injuryLevel: parseFloat(injuryLevelSelect.value) || 0,
         judgment: parseFloat(judgmentSelect.value) || 0,
@@ -277,6 +280,7 @@ function resetAll() {
     // 重置最终易伤下拉框
     if (finalVulnSkillSelect) finalVulnSkillSelect.value = '0';
     if (finalVulnAuraSelect) finalVulnAuraSelect.value = '0';
+    if (finalVulnSmashSelect) finalVulnSmashSelect.value = '0';
     updateAll();
 }
 
@@ -284,6 +288,9 @@ document.getElementById('resetToDefault').addEventListener('click', resetAll);
 const allInputs = document.querySelectorAll('input, select');
 allInputs.forEach(el => el.addEventListener('input', updateAll));
 updateAll();
+document.getElementById('versionDisplay').textContent = APP_VERSION_DISPLAY;
+const modalTitleEl = document.getElementById('modalTitle');
+if (modalTitleEl) modalTitleEl.textContent += ' ' + APP_VERSION;
 
 document.getElementById('openConversionBtnDisplay').addEventListener('click', () => openConversionModal('display'));
 document.getElementById('openConversionBtnActual').addEventListener('click', () => openConversionModal('actual'));
@@ -366,6 +373,7 @@ function getCurrentFullConfig() {
         profession: professionSelect.value,
         finalVulnSkill: finalVulnSkillSelect ? finalVulnSkillSelect.value : '0',
         finalVulnAura: finalVulnAuraSelect ? finalVulnAuraSelect.value : '0',
+        finalVulnSmash: finalVulnSmashSelect ? finalVulnSmashSelect.value : '0',
         displayConvBase: displayConvParams.base,
         displayConvMultiplier: displayConvParams.multiplier,
         displayConvBonus: displayConvParams.bonus,
@@ -429,6 +437,7 @@ function applyRecordToCalculator(record) {
     if (config.customFinalVulnEntries) customFinalVulnList.setFromSaved(config.customFinalVulnEntries);
     if (config.finalVulnSkill !== undefined && finalVulnSkillSelect) finalVulnSkillSelect.value = config.finalVulnSkill;
     if (config.finalVulnAura !== undefined && finalVulnAuraSelect) finalVulnAuraSelect.value = config.finalVulnAura;
+    if (config.finalVulnSmash !== undefined && finalVulnSmashSelect) finalVulnSmashSelect.value = config.finalVulnSmash;
     updateAll();
 }
 
@@ -466,9 +475,10 @@ const damageFieldMeta = {
     weaponCrit: { name: "武器爆伤", zone: "⚡ 爆伤区间", unit: "%" },
     heshaAura: { name: "赫沙光环", zone: "⚡ 爆伤区间", unit: "%" },
     uriaConvert: { name: "乌利亚转化", zone: "⚡ 爆伤区间", unit: "%" },
-    finalDmgSkill: { name: "最终增伤技能", zone: "✨ 最终增伤区间", unit: "%" },
+    finalDmgSkill: { name: "无视守护·寒境", zone: "✨ 最终增伤区间", unit: "%" },
     finalVulnSkill: { name: "阿尔德法印", zone: "🎯 最终易伤区间", unit: "%" },
     finalVulnAura: { name: "塞娜光环", zone: "🎯 最终易伤区间", unit: "%" },
+    finalVulnSmash: { name: "粉碎", zone: "🎯 最终易伤区间", unit: "%" },
     takenBuff: { name: "易伤BUFF", zone: "🎯 易伤区间", unit: "%" },
     injuryLevel: { name: "受伤程度", zone: "🎯 易伤区间", unit: "%" },
     judgment: { name: "审判", zone: "🎯 易伤区间", unit: "%" },
@@ -513,6 +523,7 @@ const SELECT_LABELS = {
     finalDmgSkill:   { '0':'无', '10':'有' },
     finalVulnSkill:  { '0':'无', '50':'有' },
     finalVulnAura:   { '0':'无', '10':'有' },
+    finalVulnSmash:  { '0':'无', '3':'1层', '6':'2层', '9':'3层', '12':'4层', '15':'5层', '18':'6层', '21':'7层', '24':'8层', '27':'9层', '30':'10层' },
     takenBuff:       { '0':'无', '10':'易伤1', '20':'易伤2', '30':'易伤3', '300':'满易伤' },
     injuryLevel:     { '0':'健康', '20':'受伤', '30':'濒死' },
     judgment:        { '0':'无', '10':'有' },
@@ -535,6 +546,7 @@ function formatFieldValue(key, value) {
 
 const damageRecordManager = createRecordManager({
     storageKey: 'SwordOfLily_Records',
+    appVersion: APP_VERSION,
     supportsTauri: true,
     recordNamePrefix: '配置',
     getDamageDisplay: (rec) => {

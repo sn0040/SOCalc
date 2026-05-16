@@ -5,6 +5,7 @@ import { CustomEntryList } from '../common/utils.js';
 import { getTarotName, getProfessionName, getImmunityName, FINAL_DMG_SKILL_DOT, FINAL_VULN_AURA, INFECTION_PERCENT, INFECTION_MAP, DOT_PROJECT, DOT_FIXED_RATE } from '../common/gameData.js';
 import { calculateDot, calculateDotEntry } from './calc.js';
 import { createRecordManager } from '../common/recordManager.js';
+import { APP_VERSION, APP_VERSION_DISPLAY } from '../common/version.js';
 
 // ================= 自定义条目管理器 =================
 const customDisplayAtkList = new CustomEntryList({ containerId: 'customDisplayAtkContainer', onUpdate: updateAllDOT });
@@ -631,6 +632,9 @@ allInputs.forEach(el => el.addEventListener('input', () => {
     updateAllDOT();
 }));
 resetAll();
+document.getElementById('versionDisplay').textContent = APP_VERSION_DISPLAY;
+const modalTitleEl = document.getElementById('modalTitle');
+if (modalTitleEl) modalTitleEl.textContent += ' ' + APP_VERSION;
 
 document.addEventListener('DOMContentLoaded', () => {
     const addDisplayBtn = document.getElementById('addCustomDisplayAtkBtn');
@@ -730,6 +734,7 @@ function formatFieldValue(key, value) {
 
 const dotRecordManager = createRecordManager({
     storageKey: 'DotDamageRecordsV6',
+    appVersion: APP_VERSION,
     recordNamePrefix: 'DOT配置',
     getDamageDisplay: (rec) => `🔥 ${rec.damage}`,
     getDamageShort: (rec) => String(rec.damage || ''),

@@ -60,9 +60,11 @@ export function createRecordManager(config) {
     } = config;
 
     const RECORD_VERSION = 1;
+    const APP_VERSION = config.appVersion || '';
     const isTauri = supportsTauri && !!(window.__TAURI__ && window.__TAURI__.fs);
     const RECORDS_FILE = 'game_records.json';
     let records = [];
+    let lastAppliedName = null;
 
     // ================= 存储 =================
     async function readRecordsFromFile() {
@@ -127,7 +129,7 @@ export function createRecordManager(config) {
     }
 
     function addRecord(name, damage, config) {
-        records.unshift({ id: Date.now(), name: name.trim(), config, damage, date: new Date().toISOString(), _version: RECORD_VERSION });
+        records.unshift({ id: Date.now(), name: name.trim(), config, damage, date: new Date().toISOString(), _version: RECORD_VERSION, appVersion: APP_VERSION });
         saveRecords();
     }
 
@@ -152,9 +154,12 @@ export function createRecordManager(config) {
         }
         let html = '';
         records.forEach(rec => {
+            const versionTag = rec.appVersion
+                ? `<span class="version-badge">${escapeHtml(rec.appVersion)}</span>`
+                : `<span class="version-badge old">旧版</span>`;
             html += `<div class="record-card" data-id="${rec.id}">
                 <div class="record-header">
-                    <span class="record-name">📌 ${escapeHtml(rec.name)}</span>
+                    <span class="record-name">📌 ${escapeHtml(rec.name)}${versionTag}</span>
                     <div class="record-damage">${getDamageDisplay(rec)}</div>
                     <div class="record-actions">
                         <button class="small-btn detail-check" data-id="${rec.id}">
@@ -182,7 +187,7 @@ export function createRecordManager(config) {
             btn.addEventListener('click', () => {
                 const id = parseInt(btn.dataset.id);
                 const rec = records.find(r => r.id === id);
-                if (rec) { applyConfig(rec); closeModal(); }
+                if (rec) { lastAppliedName = rec.name; applyConfig(rec); closeModal(); }
             });
         });
         document.querySelectorAll('.delete-record').forEach(btn => {
@@ -375,9 +380,15 @@ export function createRecordManager(config) {
     }
 
     async function handleSave() {
-        let defaultName = recordNamePrefix;
-        for (let i = 1; i <= records.length + 1; i++) {
-            if (!records.some(r => r.name === `记录${i}`)) { defaultName = `记录${i}`; break; }
+        let defaultName;
+        if (lastAppliedName) {
+            defaultName = lastAppliedName;
+            lastAppliedName = null;
+        } else {
+            defaultName = recordNamePrefix;
+            for (let i = 1; i <= records.length + 1; i++) {
+                if (!records.some(r => r.name === `记录${i}`)) { defaultName = `记录${i}`; break; }
+            }
         }
         let name = await showPrompt(`为本次记录命名 (最多${recordNameMaxLen}字)`, defaultName);
         if (!name) return;

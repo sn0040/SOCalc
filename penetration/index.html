@@ -11,7 +11,7 @@
 <div class="calculator-card">
     <h1>
         ✨ 铃兰之剑 · 穿透伤害计算
-        <span>V1.4.0</span>
+        <span id="versionDisplay"></span>
         <span class="author-badge">by 阿呆</span>
         <a href="../index.html" style="background: #2d4059; color: #ffd966; text-decoration: none; padding: 5px 14px; border-radius: 40px; font-size: 0.9rem; font-weight: 500; margin-left: auto;">← 返回</a>
     </h1>
@@ -32,8 +32,9 @@
         </div>
         <div class="selector-item"><label>⚖️ 克制关系</label><select id="penWeakness"><option value="1.0">无克制 (1.0)</option><option value="1.3">三色克制 (1.3)</option><option value="0.7">三色被克 (0.7)</option><option value="1.4">光暗克制 (1.4)</option><option value="0.6">光暗被克 (0.6)</option></select></div>
         <div class="selector-item"><label>🃏 塔罗选择</label><select id="penTarot"><option value="none">无 (0%)</option><option value="death">死神 (穿透增伤13%)</option><option value="fool">愚者 (生命百分比20%)</option></select></div>
-        <div class="selector-item"><label>📐 技能倍率 (%)</label><input type="number" id="penSkillMult" value="100" min="0" step="5"></div>
     </div>
+
+    <div class="skill-row" style="margin-bottom: 20px;"><label>📐 技能倍率 (%)</label><input type="number" id="penSkillMult" value="100" min="0" step="5"></div>
 
     <div class="section-grid">
         <!-- 攻击区间卡片（顺序调整：基础输入 → 加成选项 → 自定义条目 → 显示结果） -->
@@ -180,7 +181,19 @@
                     <option value="0">无 (0%)</option>
                     <option value="10">有 (10%)</option>
                 </select></div>
-                <div></div>
+                <div><label>粉碎</label><select id="finalVulnSmash">
+                    <option value="0">无 (0%)</option>
+                    <option value="3">1层 (3%)</option>
+                    <option value="6">2层 (6%)</option>
+                    <option value="9">3层 (9%)</option>
+                    <option value="12">4层 (12%)</option>
+                    <option value="15">5层 (15%)</option>
+                    <option value="18">6层 (18%)</option>
+                    <option value="21">7层 (21%)</option>
+                    <option value="24">8层 (24%)</option>
+                    <option value="27">9层 (27%)</option>
+                    <option value="30">10层 (30%)</option>
+                </select></div>
             </div>
             <div id="customFinalVulnContainer" style="margin-bottom: 10px;"></div>
             <button id="addCustomFinalVulnBtn" class="btn action-btn" style="width:100%; margin-top: 8px;">➕ 添加最终易伤自定义条目</button>
@@ -217,9 +230,10 @@
 <!-- 记录模态框 -->
 <div id="recordModal" class="modal-mask">
     <div class="modal-container">
-        <div class="modal-header"><span>📚 穿透伤害记录库</span><button class="close-modal" id="closeModalBtn">✖ 关闭</button></div>
+        <div class="modal-header"><span id="modalTitle">📚 穿透伤害记录库</span><button class="close-modal" id="closeModalBtn">✖ 关闭</button></div>
         <div id="recordsListArea">加载中...</div>
         <div id="compareArea" style="margin-top: 20px;"></div>
+        <div class="modal-footer">💡 版本不符可填入计算器重新记录</div>
     </div>
 </div>
 

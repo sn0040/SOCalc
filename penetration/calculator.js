@@ -2,9 +2,10 @@
 import { preloadScreenshot, loadHtml2Canvas, showLoading, hideLoading, showScreenshotError } from '../common/screenshot.js';
 import { computeConversionValue } from '../common/conversion.js';
 import { CustomEntryList } from '../common/utils.js';
-import { getTarotName, getProfessionName, getWeaknessName, LIFE_TYPE, getImmunityName, ANNA_AURA, EMPEROR_COLD, FINAL_VULN_AURA, ATTACK_MODE } from '../common/gameData.js';
+import { getTarotName, getProfessionName, getWeaknessName, LIFE_TYPE, getImmunityName, ANNA_AURA, EMPEROR_COLD, FINAL_VULN_AURA, FINAL_VULN_SMASH, ATTACK_MODE } from '../common/gameData.js';
 import { calculatePenetration } from './calc.js';
 import { createRecordManager } from '../common/recordManager.js';
+import { APP_VERSION, APP_VERSION_DISPLAY } from '../common/version.js';
 
 // ================= 自定义条目管理器 =================
 const customDisplayAtkList = new CustomEntryList({ containerId: 'customDisplayAtkContainer', onUpdate: updatePenetration });
@@ -195,6 +196,7 @@ const penBonusOptionsDiv = document.getElementById('penBonusOptions');
 const penBonusSectionDiv = document.getElementById('penBonusSection');
 // 新增最终易伤元素
 const finalVulnAuraSelect = document.getElementById('finalVulnAura');
+const finalVulnSmashSelect = document.getElementById('finalVulnSmash');
 const finalVulnMultSpan = document.getElementById('finalVulnMult');
 
 function toggleBonusOptions() {
@@ -263,6 +265,7 @@ function collectInputs() {
         immunity: parseFloat(penImmunity.value) || 0,
         emperorCold: parseFloat(penEmperorCold.value) || 0,
         finalVulnAura: parseFloat(finalVulnAuraSelect.value) || 0,
+        finalVulnSmash: parseFloat(finalVulnSmashSelect.value) || 0,
         customPenDmgEntries: customPenDmgList.entries.map(e => e.percent || 0),
         customPenVulnEntries: customPenVulnList.entries.map(e => e.percent || 0),
         customFinalDmgEntries: customFinalDmgList.entries.map(e => e.percent || 0),
@@ -367,6 +370,7 @@ function resetAll() {
     penPenVuln.value = '0';
     penImmunity.value = '0';
     if (finalVulnAuraSelect) finalVulnAuraSelect.value = '0';
+    if (finalVulnSmashSelect) finalVulnSmashSelect.value = '0';
     singleDisplayConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
     singleActualConvParams = { base: 0, multiplier: 0, bonus: 0, hiddenBonus: 0 };
     singleDisplayConversion = 0;
@@ -393,6 +397,9 @@ penLifeType.addEventListener('change', () => { toggleLifeRows(); updatePenetrati
 document.getElementById('resetToDefault').addEventListener('click', resetAll);
 toggleLifeRows();
 updatePenetration();
+document.getElementById('versionDisplay').textContent = APP_VERSION_DISPLAY;
+const modalTitleEl = document.getElementById('modalTitle');
+if (modalTitleEl) modalTitleEl.textContent += ' ' + APP_VERSION;
 
 document.getElementById('attackModeSelect').addEventListener('change', (e) => {
     attackMode = e.target.value;
@@ -469,13 +476,14 @@ const penFieldMeta = {
     penGloryGuide: { name: "光辉的指引", zone: "✨ 穿透增伤区间", unit: "%" },
     penAnnaAura: { name: "安娜大光环", zone: "✨ 穿透增伤区间", unit: "%" },
     penWoundLayers: { name: "狼姐伤口层数", zone: "🎯 穿透易伤区间", unit: "层" },
-    penEmperorCold: { name: "大帝个性寒境", zone: "✨ 最终增伤区间", unit: "%" },
+    penEmperorCold: { name: "无视守护·寒境", zone: "✨ 最终增伤区间", unit: "%" },
     penPuppet: { name: "傀儡", zone: "🎯 穿透易伤区间", unit: "%" },
     penNightmare: { name: "梦魇", zone: "🎯 穿透易伤区间", unit: "%" },
     penPenVuln: { name: "穿透易伤", zone: "🎯 穿透易伤区间", unit: "%" },
     penImmunity: { name: "免疫减免", zone: "🎯 穿透易伤区间", unit: "%" },
     attackMode: { name: "结算模式", zone: "🌐 全局设置" },
     finalVulnAura: { name: "塞娜光环", zone: "🎯 最终易伤区间", unit: "%" },
+    finalVulnSmash: { name: "粉碎", zone: "🎯 最终易伤区间", unit: "%" },
     _singleDisplayConversion: { name: "显示攻击转化值", zone: "⚔️ 攻击区间", unit: "" },
     _singleActualConversion: { name: "实际攻击转化值", zone: "⚔️ 攻击区间", unit: "" },
     _physConversion: { name: "物攻转化值", zone: "⚔️ 攻击区间", unit: "" },
@@ -514,6 +522,7 @@ const PEN_SELECT_LABELS = {
     penAnnaAura:          { '0':'无', '10':'有', '20':'守护失效' },
     penEmperorCold:       { '0':'无', '10':'有' },
     finalVulnAura:        { '0':'无', '10':'有' },
+    finalVulnSmash:       { '0':'无', '3':'1层', '6':'2层', '9':'3层', '12':'4层', '15':'5层', '18':'6层', '21':'7层', '24':'8层', '27':'9层', '30':'10层' },
     attackMode:           { 'single':'单攻结算', 'double':'双攻结算' },
 };
 
@@ -535,11 +544,12 @@ function formatFieldValue(key, value) {
     return val + (unit ? unit : '');
 }
 function getCurrentPenConfig() {
-    return {
+    const isSingle = attackMode === 'single';
+    const lifeVal = parseFloat(penLifeValue.value) || 0;
+    const hasLifeConfig = lifeVal !== 0;
+
+    const config = {
         attackMode: attackMode,
-        penAtkBaseSingle: penAtkBaseSingle ? penAtkBaseSingle.value : '3000',
-        penAtkPhys: penAtkPhys ? penAtkPhys.value : '3000',
-        penAtkMagic: penAtkMagic ? penAtkMagic.value : '3000',
         penAtkBuff: penAtkBuff.value,
         penFlag: penFlag.value,
         penSwordScepter: penSwordScepter.value,
@@ -553,10 +563,6 @@ function getCurrentPenConfig() {
         penWeakness: penWeakness.value,
         penTarot: penTarot.value,
         penSkillMult: penSkillMult.value,
-        penLifeType: penLifeType.value,
-        penLifeValue: penLifeValue.value,
-        penLifeAtk: penLifeAtk.value,
-        penLifeTargetHp: penLifeTargetHp.value,
         penDreamTalk: penDreamTalk.value,
         penLukarAura: penLukarAura.value,
         penIsilindAura: penIsilindAura.value,
@@ -574,6 +580,7 @@ function getCurrentPenConfig() {
         penPenVuln: penPenVuln.value,
         penImmunity: penImmunity.value,
         finalVulnAura: finalVulnAuraSelect ? finalVulnAuraSelect.value : '0',
+        finalVulnSmash: finalVulnSmashSelect ? finalVulnSmashSelect.value : '0',
         singleDisplayConvBase: singleDisplayConvParams.base,
         singleDisplayConvMultiplier: singleDisplayConvParams.multiplier,
         singleDisplayConvBonus: singleDisplayConvParams.bonus,
@@ -597,13 +604,31 @@ function getCurrentPenConfig() {
         customPenVulnEntries: customPenVulnList.entries.map(e => ({ name: e.name, percent: e.percent })),
         customFinalDmgEntries: customFinalDmgList.entries.map(e => ({ name: e.name, percent: e.percent })),
         customFinalVulnEntries: customFinalVulnList.entries.map(e => ({ name: e.name, percent: e.percent })),
-        _displayAtk: attackMode === 'single' ? penDisplayAtkSingle.innerText : (penPhysDisplay.innerText + ' + ' + penMagicDisplay.innerText),
-        _actualAtk: attackMode === 'single' ? penActualAtkSingle.innerText : (penPhysActual.innerText + ' + ' + penMagicActual.innerText),
+        _displayAtk: isSingle ? penDisplayAtkSingle.innerText : (penPhysDisplay.innerText + ' + ' + penMagicDisplay.innerText),
+        _actualAtk: isSingle ? penActualAtkSingle.innerText : (penPhysActual.innerText + ' + ' + penMagicActual.innerText),
         _singleDisplayConversion: singleDisplayConversion,
         _singleActualConversion: singleActualConversion,
         _physConversion: physConversion,
         _magicConversion: magicConversion
     };
+
+    // 按攻击模式只保存对应的基础攻击字段
+    if (isSingle) {
+        config.penAtkBaseSingle = penAtkBaseSingle ? penAtkBaseSingle.value : '3000';
+    } else {
+        config.penAtkPhys = penAtkPhys ? penAtkPhys.value : '3000';
+        config.penAtkMagic = penAtkMagic ? penAtkMagic.value : '3000';
+    }
+
+    // 百分比区间未配置时（lifeValue=0），不保存该区间字段
+    if (hasLifeConfig) {
+        config.penLifeType = penLifeType.value;
+        config.penLifeValue = penLifeValue.value;
+        config.penLifeAtk = penLifeAtk.value;
+        config.penLifeTargetHp = penLifeTargetHp.value;
+    }
+
+    return config;
 }
 function applyRecordToCalculator(record) {
     const config = record.config;
@@ -649,6 +674,7 @@ function applyRecordToCalculator(record) {
     penPenVuln.value = config.penPenVuln || '0';
     penImmunity.value = config.penImmunity || '0';
     if (finalVulnAuraSelect) finalVulnAuraSelect.value = config.finalVulnAura || '0';
+    if (finalVulnSmashSelect) finalVulnSmashSelect.value = config.finalVulnSmash || '0';
     singleDisplayConvParams = {
         base: parseFloat(config.singleDisplayConvBase) || 0, multiplier: parseFloat(config.singleDisplayConvMultiplier) || 0,
         bonus: parseFloat(config.singleDisplayConvBonus) || 0, hiddenBonus: parseFloat(config.singleDisplayConvHiddenBonus) || 0
@@ -682,6 +708,7 @@ function applyRecordToCalculator(record) {
 
 const penRecordManager = createRecordManager({
     storageKey: 'PenetrationRecords_V2_1',
+    appVersion: APP_VERSION,
     recordNamePrefix: '穿透',
     getDamageDisplay: (rec) => `✨ ${rec.damage}`,
     getDamageShort: (rec) => rec.damage !== undefined ? rec.damage : '—',

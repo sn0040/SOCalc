@@ -116,7 +116,7 @@ export function calculateDamage(inputs) {
     const finalMult = 1 + (inputs.finalDmgSkill + finalDmgSum) / 100;
 
     // ---- 最终易伤（乘算） ----
-    let finalVulnMult = (1 + inputs.finalVulnSkill/100) * (1 + inputs.finalVulnAura/100);
+    let finalVulnMult = (1 + inputs.finalVulnSkill/100) * (1 + inputs.finalVulnAura/100) * (1 + inputs.finalVulnSmash/100);
     for (const val of inputs.finalVulnEntries) {
         finalVulnMult *= (1 + val / 100);
     }
